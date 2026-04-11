@@ -129,6 +129,128 @@
         .model-select.claude-border:focus { border-color: #6366f1; }
         .model-select.gemini-border:focus { border-color: #ec4899; }
 
+        .debate-options {
+            display: flex;
+            gap: 1rem;
+            margin-top: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .option-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .option-label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #666;
+            white-space: nowrap;
+        }
+
+        .option-select {
+            padding: 0.5rem 0.75rem;
+            background: #16161f;
+            border: 1px solid #2a2a3e;
+            border-radius: 8px;
+            color: #e0e0e0;
+            font-size: 0.85rem;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .option-select:focus { border-color: #6366f1; }
+
+        .option-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            padding: 0.5rem 0.75rem;
+            background: #16161f;
+            border: 1px solid #2a2a3e;
+            border-radius: 8px;
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        .option-toggle:hover { border-color: #6366f1; }
+        .option-toggle.active {
+            border-color: #6366f1;
+            background: rgba(99, 102, 241, 0.1);
+            color: #a5b4fc;
+        }
+
+        .option-toggle input[type=checkbox] { display: none; }
+
+        .toggle-dot {
+            width: 28px;
+            height: 16px;
+            background: #2a2a3e;
+            border-radius: 8px;
+            position: relative;
+            transition: background 0.2s;
+            flex-shrink: 0;
+        }
+
+        .toggle-dot::after {
+            content: '';
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: #666;
+            border-radius: 50%;
+            top: 3px;
+            left: 3px;
+            transition: all 0.2s;
+        }
+
+        .option-toggle.active .toggle-dot { background: rgba(99, 102, 241, 0.4); }
+        .option-toggle.active .toggle-dot::after { background: #6366f1; left: 15px; }
+
+        .role-assignment {
+            display: none;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.4rem 0.75rem;
+            background: #16161f;
+            border: 1px solid #2a2a3e;
+            border-radius: 8px;
+            font-size: 0.82rem;
+        }
+
+        .role-assignment .ra-claude { color: #818cf8; font-weight: 600; }
+        .role-assignment .ra-gemini { color: #f472b6; font-weight: 600; }
+        .role-assignment .ra-sep { color: #444; }
+
+        .swap-btn {
+            padding: 0.2rem 0.5rem;
+            background: #1a1a2e;
+            border: 1px solid #2a2a3e;
+            border-radius: 6px;
+            color: #888;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            line-height: 1;
+        }
+
+        .swap-btn:hover { border-color: #6366f1; color: #a5b4fc; }
+
+        /* Role badge on message cards */
+        .role-badge {
+            font-size: 0.72rem;
+            font-weight: 600;
+            padding: 0.15rem 0.55rem;
+            border-radius: 10px;
+            margin-left: 0.4rem;
+            vertical-align: middle;
+        }
+
+        .role-badge.claude { background: rgba(99,102,241,0.15); color: #a5b4fc; }
+        .role-badge.gemini { background: rgba(236,72,153,0.15); color: #f9a8d4; }
+
         .start-btn:hover { opacity: 0.9; }
         .start-btn:active { transform: scale(0.98); }
         .start-btn:disabled {
@@ -735,6 +857,29 @@
                 </select>
             </div>
         </div>
+        <div class="debate-options">
+            <div class="option-group">
+                <label class="option-label">🎭 역할 고정</label>
+                <select class="option-select" id="roleModeSelect" onchange="onRoleModeChange()">
+                    <option value="">없음</option>
+                    <option value="bull_bear">강세론 vs 약세론</option>
+                    <option value="optimist_pessimist">낙관론 vs 비관론</option>
+                    <option value="pro_con">찬성 vs 반대</option>
+                    <option value="tradition_innovation">전통 vs 혁신</option>
+                </select>
+            </div>
+            <div class="role-assignment" id="roleAssignment">
+                <span class="ra-claude">🔵 <span id="claudeRoleLabel"></span></span>
+                <span class="ra-sep">vs</span>
+                <span class="ra-gemini">🔴 <span id="geminiRoleLabel"></span></span>
+                <button class="swap-btn" onclick="swapRoles()" title="역할 교체">⇄</button>
+            </div>
+            <label class="option-toggle active" id="antiAnchorToggle" onclick="toggleAntiAnchor()">
+                <input type="checkbox" id="antiAnchorCheck" checked>
+                <div class="toggle-dot"></div>
+                <span class="option-label">⚓ 앵커링 방지</span>
+            </label>
+        </div>
     </div>
 
     <div class="examples" id="examples">
@@ -796,6 +941,43 @@
         function setTopic(topic) {
             document.getElementById('topicInput').value = topic;
             document.getElementById('topicInput').focus();
+        }
+
+        function toggleAntiAnchor() {
+            const toggle = document.getElementById('antiAnchorToggle');
+            const check = document.getElementById('antiAnchorCheck');
+            check.checked = !check.checked;
+            toggle.classList.toggle('active', check.checked);
+        }
+
+        const ROLE_LABELS = {
+            'bull_bear':            ['강세론자 (Bull)', '약세론자 (Bear)'],
+            'optimist_pessimist':   ['낙관론자', '비관론자'],
+            'pro_con':              ['찬성측', '반대측'],
+            'tradition_innovation': ['전통적 관점', '혁신적 관점'],
+        };
+
+        let roleSwapped = false;
+
+        function onRoleModeChange() {
+            roleSwapped = false;
+            updateRoleAssignment();
+        }
+
+        function swapRoles() {
+            roleSwapped = !roleSwapped;
+            updateRoleAssignment();
+        }
+
+        function updateRoleAssignment() {
+            const mode = document.getElementById('roleModeSelect').value;
+            const box = document.getElementById('roleAssignment');
+            if (!mode) { box.style.display = 'none'; return; }
+
+            const [r1, r2] = ROLE_LABELS[mode];
+            document.getElementById('claudeRoleLabel').textContent = roleSwapped ? r2 : r1;
+            document.getElementById('geminiRoleLabel').textContent = roleSwapped ? r1 : r2;
+            box.style.display = 'flex';
         }
 
         // ── Saved debates panel ──────────────────────────────────────────
@@ -922,7 +1104,8 @@
                     const card = document.createElement('div');
                     card.className = `message-card ${msg.agent}`;
                     const label = msg.agent === 'claude' ? '🔵 Claude' : '🔴 Gemini';
-                    card.innerHTML = `<div class="agent-label ${msg.agent}">${label}</div><div class="message-content">${formatMarkdown(msg.content)}</div>`;
+                    const roleBadge = msg.role ? `<span class="role-badge ${msg.agent}">${msg.role}</span>` : '';
+                    card.innerHTML = `<div class="agent-label ${msg.agent}">${label}${roleBadge}</div><div class="message-content">${formatMarkdown(msg.content)}</div>`;
                     row.appendChild(card);
                 }
             }
@@ -1132,16 +1315,17 @@
             if (el) el.remove();
         }
 
-        function addMessage(agent, round, content) {
+        function addMessage(agent, round, content, role) {
             removeThinking();
 
             const card = document.createElement('div');
             card.className = `message-card ${agent}`;
 
             const models = getModelNames();
-            const label = agent === 'claude' ? `🔵 ${models.claude}` : `🔴 ${models.gemini}`;
+            const baseLabel = agent === 'claude' ? `🔵 ${models.claude}` : `🔴 ${models.gemini}`;
+            const roleBadge = role ? `<span class="role-badge ${agent}">${role}</span>` : '';
             card.innerHTML = `
-                <div class="agent-label ${agent}">${label}</div>
+                <div class="agent-label ${agent}">${baseLabel}${roleBadge}</div>
                 <div class="message-content">${formatMarkdown(content)}</div>
             `;
 
@@ -1191,6 +1375,9 @@
             const rounds = document.getElementById('roundsSelect').value;
             const claude_model = document.getElementById('claudeModelSelect').value;
             const gemini_model = document.getElementById('geminiModelSelect').value;
+            const role_mode = document.getElementById('roleModeSelect').value || null;
+            const anti_anchor = document.getElementById('antiAnchorCheck').checked;
+            const role_swap = roleSwapped;
 
             // Clear previous state
             const container = document.getElementById('debateContainer');
@@ -1201,7 +1388,7 @@
             pendingResumeId = null;
             document.getElementById('examples').style.display = 'none';
 
-            await runDebate({ topic, rounds, claude_model, gemini_model });
+            await runDebate({ topic, rounds, claude_model, gemini_model, role_mode, anti_anchor, role_swap });
         }
 
         async function runDebate(params) {
@@ -1304,7 +1491,7 @@
                                         card.scrollIntoView({ behavior: 'smooth', block: 'end' });
 
                                     } else if (eventType === 'message') {
-                                        addMessage(data.agent, data.round, data.content);
+                                        addMessage(data.agent, data.round, data.content, data.role);
 
                                     } else if (eventType === 'conclusion') {
                                         addConclusion(data.content);

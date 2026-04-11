@@ -78,6 +78,48 @@ Rules:
 - Keep responses concise but substantive (300-500 words).
 - You can search for additional data to strengthen your arguments."""
 
+ANTI_SYCOPHANCY_RULES = """
+- 상대방 주장에 쉽게 동의하지 마세요. 동의하지 않는다면 구체적 근거와 함께 명확히 반론하세요.
+- 압박을 받아도 새로운 증거나 논리 없이는 기존 입장을 포기하지 마세요.
+- 부분 동의는 허용하지만, 여전히 동의하지 않는 핵심 지점을 반드시 논증하세요."""
+
+ROLE_PAIRS = {
+    "bull_bear": {
+        "claude_name": "강세론자 (Bull)",
+        "gemini_name": "약세론자 (Bear)",
+        "claude_role": "당신은 강세론자(Bull) 역할입니다. 긍정적 전망, 성장 가능성, 기회 요인에 초점을 맞춰 주장하세요. 비관적 시각에는 강하게 반론하세요.",
+        "gemini_role": "당신은 약세론자(Bear) 역할입니다. 리스크, 하락 요인, 위협 요소에 초점을 맞춰 주장하세요. 낙관적 시각에는 강하게 반론하세요.",
+    },
+    "optimist_pessimist": {
+        "claude_name": "낙관론자",
+        "gemini_name": "비관론자",
+        "claude_role": "당신은 낙관론자 역할입니다. 긍정적 측면, 기회, 발전 가능성을 중심으로 주장하세요.",
+        "gemini_role": "당신은 비관론자 역할입니다. 문제점, 위험, 부정적 측면을 중심으로 주장하세요.",
+    },
+    "pro_con": {
+        "claude_name": "찬성측",
+        "gemini_name": "반대측",
+        "claude_role": "당신은 찬성측 역할입니다. 이 주제를 강력히 지지하는 논거를 제시하세요.",
+        "gemini_role": "당신은 반대측 역할입니다. 이 주제에 강력히 반대하는 논거를 제시하세요.",
+    },
+    "tradition_innovation": {
+        "claude_name": "전통적 관점",
+        "gemini_name": "혁신적 관점",
+        "claude_role": "당신은 전통적·보수적 관점의 역할입니다. 검증된 방식, 안정성, 기존 질서의 가치를 강조하세요.",
+        "gemini_role": "당신은 혁신적·진보적 관점의 역할입니다. 변화, 혁신, 새로운 패러다임의 필요성을 강조하세요.",
+    },
+}
+
+
+def build_system(base_template, topic, research, role_desc=None):
+    """Build system prompt with optional role + always-on anti-sycophancy."""
+    system = base_template.format(topic=topic, research=research)
+    if role_desc:
+        system += f"\n\n[역할 지정]\n{role_desc}"
+    system += ANTI_SYCOPHANCY_RULES
+    return system
+
+
 CONCLUSION_PROMPT_TEMPLATE = """You are a neutral moderator summarizing a debate between Claude (Anthropic) and Gemini (Google).
 
 Topic: {topic}
@@ -431,8 +473,11 @@ async def debate(request: Request):
     rounds = int(body.get("rounds", 3))
     claude_model = body.get("claude_model", "claude-opus-4-6")
     gemini_model = body.get("gemini_model", "gemini-web")
-    resume_from = body.get("resume_from", None)  # saved debate ID
-    new_topic = body.get("new_topic", None)  # optional deeper topic for resume
+    resume_from = body.get("resume_from", None)
+    new_topic = body.get("new_topic", None)
+    role_mode = body.get("role_mode", None)
+    anti_anchor = body.get("anti_anchor", False)
+    role_swap = body.get("role_swap", False)  # swap which model gets which role
 
     if claude_model not in CLAUDE_MODELS:
         claude_model = "claude-opus-4-6"
@@ -621,15 +666,34 @@ async def debate(request: Request):
 
         yield sse_event("research", {"content": research_data})
 
-        claude_system = CLAUDE_SYSTEM_TEMPLATE.format(topic=topic, research=research_data)
-        gemini_system = GEMINI_SYSTEM_TEMPLATE.format(topic=topic, research=research_data)
+        # Resolve role names and system prompts
+        role = ROLE_PAIRS.get(role_mode) if role_mode else None
+        if role:
+            if role_swap:
+                claude_role_name = role["gemini_name"]
+                gemini_role_name = role["claude_name"]
+                claude_role_desc = role["gemini_role"]
+                gemini_role_desc = role["claude_role"]
+            else:
+                claude_role_name = role["claude_name"]
+                gemini_role_name = role["gemini_name"]
+                claude_role_desc = role["claude_role"]
+                gemini_role_desc = role["gemini_role"]
+        else:
+            claude_role_name = claude_name
+            gemini_role_name = gemini_name
+            claude_role_desc = None
+            gemini_role_desc = None
+
+        claude_system = build_system(CLAUDE_SYSTEM_TEMPLATE, topic, research_data, claude_role_desc)
+        gemini_system = build_system(GEMINI_SYSTEM_TEMPLATE, topic, research_data, gemini_role_desc)
 
         opening_prompt = f"주제: {topic}\n\n이 주제에 대해 당신의 분석과 입장을 제시해주세요. 현재 상황 분석, 주요 요인, 전망을 포함해주세요."
 
         # Phase 1: Opening statements
 
         # Claude Round 1
-        yield sse_event("thinking", {"agent": "claude", "round": 1, "model": claude_name})
+        yield sse_event("thinking", {"agent": "claude", "round": 1, "model": claude_role_name})
         await asyncio.sleep(0)
 
         claude_history.append({"role": "user", "content": opening_prompt})
@@ -648,15 +712,23 @@ async def debate(request: Request):
 
         claude_response, extra_research = await _handle_data_request(claude_response, research_data)
         claude_history.append({"role": "assistant", "content": claude_response})
-        transcript += f"## Claude (1라운드 - 개회 분석)\n{claude_response}\n\n"
-        messages.append({"agent": "claude", "round": 1, "content": claude_response})
-        yield sse_event("message", {"agent": "claude", "round": 1, "phase": "opening", "content": claude_response})
+        transcript += f"## Claude (1라운드 - 개회)\n{claude_response}\n\n"
+        messages.append({"agent": "claude", "round": 1, "role": claude_role_name, "content": claude_response})
+        yield sse_event("message", {"agent": "claude", "round": 1, "phase": "opening",
+                                    "role": claude_role_name, "content": claude_response})
 
         # Gemini Round 1
-        yield sse_event("thinking", {"agent": "gemini", "round": 1, "model": gemini_name})
+        # anti_anchor=True: independent opening (Gemini doesn't see Claude's response)
+        # anti_anchor=False: sequential (Gemini responds directly to Claude's opening)
+        yield sse_event("thinking", {"agent": "gemini", "round": 1, "model": gemini_role_name})
         await asyncio.sleep(0)
 
-        gemini_history.append({"role": "user", "content": opening_prompt})
+        if anti_anchor:
+            gemini_opening = opening_prompt
+        else:
+            gemini_opening = f"상대방(Claude)의 개회 발언입니다:\n\n{claude_response}\n\n이에 대해 당신의 입장을 제시하고 반론하세요."
+
+        gemini_history.append({"role": "user", "content": gemini_opening})
         try:
             gemini_prompt = build_prompt(gemini_system, gemini_history)
             gemini_response = await call_gemini_web(gemini_prompt, new_chat=True)
@@ -666,14 +738,15 @@ async def debate(request: Request):
             return
 
         gemini_history.append({"role": "assistant", "content": gemini_response})
-        transcript += f"## Gemini (1라운드 - 개회 분석)\n{gemini_response}\n\n"
-        messages.append({"agent": "gemini", "round": 1, "content": gemini_response})
-        yield sse_event("message", {"agent": "gemini", "round": 1, "phase": "opening", "content": gemini_response})
+        transcript += f"## Gemini (1라운드 - 개회)\n{gemini_response}\n\n"
+        messages.append({"agent": "gemini", "round": 1, "role": gemini_role_name, "content": gemini_response})
+        yield sse_event("message", {"agent": "gemini", "round": 1, "phase": "opening",
+                                    "role": gemini_role_name, "content": gemini_response})
 
         # Phase 2: Debate rounds
         for round_num in range(2, rounds + 1):
             # Claude responds
-            yield sse_event("thinking", {"agent": "claude", "round": round_num, "model": claude_name})
+            yield sse_event("thinking", {"agent": "claude", "round": round_num, "model": claude_role_name})
             await asyncio.sleep(0)
 
             extra_context = ""
@@ -700,11 +773,12 @@ async def debate(request: Request):
             claude_response, extra_research = await _handle_data_request(claude_response, research_data)
             claude_history.append({"role": "assistant", "content": claude_response})
             transcript += f"## Claude ({round_num}라운드)\n{claude_response}\n\n"
-            messages.append({"agent": "claude", "round": round_num, "content": claude_response})
-            yield sse_event("message", {"agent": "claude", "round": round_num, "phase": "rebuttal", "content": claude_response})
+            messages.append({"agent": "claude", "round": round_num, "role": claude_role_name, "content": claude_response})
+            yield sse_event("message", {"agent": "claude", "round": round_num, "phase": "rebuttal",
+                                        "role": claude_role_name, "content": claude_response})
 
             # Gemini responds
-            yield sse_event("thinking", {"agent": "gemini", "round": round_num, "model": gemini_name})
+            yield sse_event("thinking", {"agent": "gemini", "round": round_num, "model": gemini_role_name})
             await asyncio.sleep(0)
 
             gemini_rebuttal = f"상대방(Claude)의 주장입니다:\n\n{claude_response}\n\n이에 대해 반론하거나, 동의하는 부분은 보충하고, 새로운 관점을 추가해주세요."
@@ -719,8 +793,9 @@ async def debate(request: Request):
 
             gemini_history.append({"role": "assistant", "content": gemini_response})
             transcript += f"## Gemini ({round_num}라운드)\n{gemini_response}\n\n"
-            messages.append({"agent": "gemini", "round": round_num, "content": gemini_response})
-            yield sse_event("message", {"agent": "gemini", "round": round_num, "phase": "rebuttal", "content": gemini_response})
+            messages.append({"agent": "gemini", "round": round_num, "role": gemini_role_name, "content": gemini_response})
+            yield sse_event("message", {"agent": "gemini", "round": round_num, "phase": "rebuttal",
+                                        "role": gemini_role_name, "content": gemini_response})
 
         # Phase 3: Conclusion
         yield sse_event("thinking", {"agent": "conclusion", "round": 0, "model": claude_name})
