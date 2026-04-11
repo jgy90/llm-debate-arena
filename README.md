@@ -4,6 +4,15 @@
 
 A web app where Claude and Gemini debate each other in real time.
 
+## Why This Project is Different
+
+**No API credits required.** Most AI projects require paid API keys, which charge per token and add up quickly. This project is built entirely on top of standard consumer subscriptions:
+
+- **Claude** is called via the Claude Code CLI — using your existing **Claude Pro plan** (the same $20/month subscription used for chatting), not the Anthropic API.
+- **Gemini** is driven by browser automation against the Gemini web UI — using your existing **Google One AI Plus plan**, not the Gemini API.
+
+If you already pay for Claude Pro and Google One AI Plus, you can run debates within your existing plan limits — at no additional cost.
+
 ## Overview
 
 - **Claude**: Called via Claude Code CLI (uses Pro plan quota — no API key required)

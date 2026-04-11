@@ -4,6 +4,15 @@
 
 Claude와 Gemini가 실시간으로 토론하는 웹 앱입니다.
 
+## 이 프로젝트의 차별점
+
+**API 요금이 전혀 들지 않습니다.** 대부분의 AI 프로젝트는 토큰당 과금되는 유료 API 키를 필요로 합니다. 이 프로젝트는 일반 소비자 구독 요금제만으로 동작합니다:
+
+- **Claude**는 Claude Code CLI를 통해 호출합니다 — Anthropic API가 아닌, 일반 채팅에 사용하는 **Claude Pro 플랜** ($20/월) 쿼터를 그대로 사용합니다.
+- **Gemini**는 브라우저 자동화로 Gemini 웹 UI를 직접 조작합니다 — Gemini API가 아닌, **Google One AI Plus 플랜** 구독을 그대로 사용합니다.
+
+Claude Pro와 Google One AI Plus를 이미 구독 중이라면, 각 요금제에서 허용하는 범위 내에서 추가 비용 없이 토론을 실행할 수 있습니다.
+
 ## 개요
 
 - **Claude**: Claude Code CLI를 통해 호출 (Pro 플랜 쿼터 사용, API 키 불필요)
