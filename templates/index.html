@@ -1,0 +1,1352 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Debate Arena</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: #0a0a0f;
+            color: #e0e0e0;
+            min-height: 100vh;
+        }
+
+        .header {
+            text-align: center;
+            padding: 2rem 1rem 1rem;
+            background: linear-gradient(180deg, #12121a 0%, #0a0a0f 100%);
+            border-bottom: 1px solid #1a1a2e;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #6366f1, #ec4899);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            color: #888;
+            font-size: 0.9rem;
+        }
+
+        .input-area {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 0.75rem;
+            align-items: stretch;
+        }
+
+        .topic-input {
+            flex: 1;
+            padding: 0.875rem 1.25rem;
+            background: #16161f;
+            border: 1px solid #2a2a3e;
+            border-radius: 12px;
+            color: #e0e0e0;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .topic-input:focus {
+            border-color: #6366f1;
+        }
+
+        .topic-input::placeholder {
+            color: #555;
+        }
+
+        .rounds-select {
+            padding: 0.875rem 1rem;
+            background: #16161f;
+            border: 1px solid #2a2a3e;
+            border-radius: 12px;
+            color: #e0e0e0;
+            font-size: 0.9rem;
+            outline: none;
+            cursor: pointer;
+            min-width: 100px;
+        }
+
+        .start-btn {
+            padding: 0.875rem 2rem;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.1s;
+            white-space: nowrap;
+        }
+
+        .model-selectors {
+            display: flex;
+            gap: 1rem;
+            margin-top: 0.75rem;
+        }
+
+        .model-select-group {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .model-label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .model-label.claude { color: #6366f1; }
+        .model-label.gemini { color: #ec4899; }
+
+        .model-select {
+            flex: 1;
+            padding: 0.5rem 0.75rem;
+            background: #16161f;
+            border: 1px solid #2a2a3e;
+            border-radius: 8px;
+            color: #e0e0e0;
+            font-size: 0.85rem;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .model-select.claude-border:focus { border-color: #6366f1; }
+        .model-select.gemini-border:focus { border-color: #ec4899; }
+
+        .start-btn:hover { opacity: 0.9; }
+        .start-btn:active { transform: scale(0.98); }
+        .start-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .stop-btn {
+            padding: 0.875rem 2rem;
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.1s;
+            white-space: nowrap;
+            display: none;
+        }
+
+        .stop-btn:hover { opacity: 0.9; }
+        .stop-btn:active { transform: scale(0.98); }
+
+        .status-bar {
+            text-align: center;
+            padding: 1rem;
+            color: #888;
+            font-size: 0.9rem;
+            min-height: 3rem;
+        }
+
+        .debate-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1rem 4rem;
+        }
+
+        .round-header {
+            text-align: center;
+            margin: 2rem 0 1rem;
+            position: relative;
+        }
+
+        .round-header span {
+            background: #0a0a0f;
+            padding: 0 1rem;
+            color: #6366f1;
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            position: relative;
+            z-index: 1;
+        }
+
+        .round-header::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: #1a1a2e;
+        }
+
+        .debate-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .message-card {
+            background: #12121a;
+            border: 1px solid #1a1a2e;
+            border-radius: 16px;
+            padding: 1.5rem;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message-card.claude {
+            border-left: 3px solid #6366f1;
+        }
+
+        .message-card.gemini {
+            border-left: 3px solid #ec4899;
+        }
+
+        .agent-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 700;
+            font-size: 0.85rem;
+            margin-bottom: 1rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+        }
+
+        .agent-label.claude {
+            color: #6366f1;
+            background: rgba(99, 102, 241, 0.1);
+        }
+
+        .agent-label.gemini {
+            color: #ec4899;
+            background: rgba(236, 72, 153, 0.1);
+        }
+
+        .message-content {
+            line-height: 1.8;
+            font-size: 0.95rem;
+            color: #ccc;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .message-content p { margin-bottom: 0.75rem; }
+        .message-content h1, .message-content h2, .message-content h3 {
+            color: #e0e0e0;
+            margin: 1rem 0 0.5rem;
+        }
+        .message-content strong { color: #e0e0e0; }
+        .message-content ul, .message-content ol {
+            margin: 0.5rem 0 0.75rem 1.5rem;
+        }
+        .message-content li { margin-bottom: 0.3rem; }
+
+        .research-card {
+            max-width: 900px;
+            margin: 1.5rem auto;
+            background: rgba(16, 185, 129, 0.06);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            border-left: 3px solid #10b981;
+            border-radius: 16px;
+            padding: 1.5rem;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .research-card .research-title {
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: #10b981;
+            margin-bottom: 0.75rem;
+        }
+
+        .research-card .message-content {
+            color: #aaa;
+            font-size: 0.85rem;
+        }
+
+        .thinking-card.research {
+            max-width: 900px;
+            margin: 0 auto;
+            border-left: 3px solid #10b981;
+        }
+
+        .thinking-card.research .thinking-dots span { background: #10b981; }
+
+        .conclusion-card {
+            max-width: 900px;
+            margin: 2rem auto;
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(236, 72, 153, 0.08));
+            border: 1px solid #2a2a3e;
+            border-radius: 16px;
+            padding: 2rem;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .conclusion-card .label {
+            font-size: 1.1rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #6366f1, #ec4899);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1rem;
+        }
+
+        .conclusion-card .message-content {
+            color: #ddd;
+        }
+
+        /* Error card */
+        .error-card {
+            max-width: 900px;
+            margin: 1.5rem auto;
+            background: rgba(239, 68, 68, 0.08);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-left: 3px solid #ef4444;
+            border-radius: 16px;
+            padding: 1.5rem;
+            animation: fadeIn 0.5s ease-out;
+            color: #f87171;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        .error-card .error-title {
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            font-size: 1rem;
+        }
+
+        /* Thinking / Loading card */
+        .thinking-card {
+            background: #12121a;
+            border: 1px solid #1a1a2e;
+            border-radius: 16px;
+            padding: 1.5rem;
+            animation: fadeIn 0.3s ease-out;
+            min-height: 120px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .thinking-card.claude { border-left: 3px solid #6366f1; }
+        .thinking-card.gemini { border-left: 3px solid #ec4899; }
+        .thinking-card.conclusion {
+            max-width: 900px;
+            margin: 0 auto;
+            border-left: 3px solid;
+            border-image: linear-gradient(135deg, #6366f1, #ec4899) 1;
+        }
+
+        .thinking-inner {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem 0;
+        }
+
+        .thinking-dots {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .thinking-dots span {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: dotPulse 1.4s ease-in-out infinite;
+        }
+
+        .thinking-card.claude .thinking-dots span { background: #6366f1; }
+        .thinking-card.gemini .thinking-dots span { background: #ec4899; }
+        .thinking-card.conclusion .thinking-dots span { background: #a78bfa; }
+
+        .thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes dotPulse {
+            0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+            40% { opacity: 1; transform: scale(1.2); }
+        }
+
+        .thinking-label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #888;
+        }
+
+        .thinking-label .model-name { color: #bbb; }
+
+        .thinking-timer {
+            font-size: 0.75rem;
+            color: #555;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .examples {
+            max-width: 800px;
+            margin: 0 auto 2rem;
+            padding: 0 1rem;
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .example-chip {
+            padding: 0.5rem 1rem;
+            background: #16161f;
+            border: 1px solid #2a2a3e;
+            border-radius: 20px;
+            color: #888;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .example-chip:hover {
+            border-color: #6366f1;
+            color: #bbb;
+        }
+
+        /* Action bar (save button) */
+        .action-bar {
+            max-width: 800px;
+            margin: 0 auto 1rem;
+            padding: 0 1rem;
+            display: none;
+            justify-content: center;
+            gap: 0.75rem;
+        }
+
+        .save-btn {
+            padding: 0.6rem 1.5rem;
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid rgba(16, 185, 129, 0.4);
+            border-radius: 10px;
+            color: #10b981;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .save-btn:hover {
+            background: rgba(16, 185, 129, 0.25);
+            border-color: #10b981;
+        }
+
+        .continue-btn {
+            padding: 0.6rem 1.5rem;
+            background: rgba(99, 102, 241, 0.15);
+            border: 1px solid rgba(99, 102, 241, 0.4);
+            border-radius: 10px;
+            color: #6366f1;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .continue-btn:hover {
+            background: rgba(99, 102, 241, 0.25);
+            border-color: #6366f1;
+        }
+
+        /* Saved debates panel */
+        .saved-panel {
+            max-width: 800px;
+            margin: 0 auto 1.5rem;
+            padding: 0 1rem;
+        }
+
+        .saved-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            color: #555;
+            font-size: 0.85rem;
+            padding: 0.5rem 0;
+            user-select: none;
+            transition: color 0.2s;
+        }
+
+        .saved-toggle:hover { color: #888; }
+
+        .saved-list {
+            margin-top: 0.5rem;
+            border: 1px solid #1a1a2e;
+            border-radius: 12px;
+            overflow: hidden;
+            display: none;
+        }
+
+        .saved-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #1a1a2e;
+            background: #12121a;
+            gap: 1rem;
+        }
+
+        .saved-item:last-child { border-bottom: none; }
+
+        .saved-item-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .saved-item-topic {
+            font-size: 0.9rem;
+            color: #ccc;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .saved-item-meta {
+            font-size: 0.75rem;
+            color: #555;
+            margin-top: 0.2rem;
+        }
+
+        .saved-item-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-shrink: 0;
+        }
+
+        .saved-item-actions button {
+            padding: 0.35rem 0.85rem;
+            border-radius: 8px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid;
+            transition: all 0.2s;
+        }
+
+        .btn-load {
+            background: rgba(99, 102, 241, 0.1);
+            border-color: rgba(99, 102, 241, 0.4);
+            color: #6366f1;
+        }
+
+        .btn-load:hover {
+            background: rgba(99, 102, 241, 0.2);
+        }
+
+        .btn-continue {
+            background: rgba(16, 185, 129, 0.1);
+            border-color: rgba(16, 185, 129, 0.4);
+            color: #10b981;
+        }
+
+        .btn-continue:hover {
+            background: rgba(16, 185, 129, 0.2);
+        }
+
+        .btn-delete {
+            background: rgba(239, 68, 68, 0.08);
+            border-color: rgba(239, 68, 68, 0.3);
+            color: #f87171;
+        }
+
+        .btn-delete:hover {
+            background: rgba(239, 68, 68, 0.15);
+        }
+
+        .continue-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        .continue-modal-box {
+            background: #16161f;
+            border: 1px solid #2a2a3e;
+            border-radius: 16px;
+            padding: 2rem;
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .continue-modal-box h3 {
+            font-size: 1rem;
+            color: #e0e0e0;
+            margin-bottom: 0.5rem;
+        }
+
+        .continue-modal-box p {
+            font-size: 0.85rem;
+            color: #888;
+            margin-bottom: 1rem;
+        }
+
+        .continue-modal-box input[type=text] {
+            width: 100%;
+            padding: 0.6rem 0.75rem;
+            background: #0a0a0f;
+            border: 1px solid #2a2a3e;
+            border-radius: 8px;
+            color: #e0e0e0;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            outline: none;
+        }
+
+        .continue-modal-box input[type=text]:focus {
+            border-color: #6366f1;
+        }
+
+        .continue-modal-hint {
+            font-size: 0.75rem;
+            color: #444;
+            margin-bottom: 1rem;
+        }
+
+        .continue-modal-box select {
+            width: 100%;
+            padding: 0.6rem 0.75rem;
+            background: #0a0a0f;
+            border: 1px solid #2a2a3e;
+            border-radius: 8px;
+            color: #e0e0e0;
+            font-size: 0.9rem;
+            margin-bottom: 1.25rem;
+            outline: none;
+        }
+
+        .continue-modal-actions {
+            display: flex;
+            gap: 0.75rem;
+            justify-content: flex-end;
+        }
+
+        .continue-modal-actions button {
+            padding: 0.6rem 1.25rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+        }
+
+        .btn-cancel-modal {
+            background: #1a1a2e;
+            color: #888;
+        }
+
+        .btn-go-modal {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white;
+        }
+
+        /* Status event */
+        .status-event {
+            text-align: center;
+            padding: 0.5rem;
+            color: #10b981;
+            font-size: 0.85rem;
+            font-style: italic;
+        }
+
+        @media (max-width: 768px) {
+            .debate-row {
+                grid-template-columns: 1fr;
+            }
+            .input-group {
+                flex-direction: column;
+            }
+            .model-selectors {
+                flex-direction: column;
+            }
+            .header h1 { font-size: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>⚔️ AI Debate Arena</h1>
+        <p>Claude와 Gemini가 토론하고, 함께 결론을 도출합니다</p>
+    </div>
+
+    <div class="input-area">
+        <div class="input-group">
+            <input type="text" class="topic-input" id="topicInput"
+                   placeholder="토론 주제를 입력하세요..."
+                   onkeydown="if(event.key==='Enter') startDebate()">
+            <select class="rounds-select" id="roundsSelect">
+                <option value="2">2 라운드</option>
+                <option value="3" selected>3 라운드</option>
+                <option value="4">4 라운드</option>
+                <option value="5">5 라운드</option>
+            </select>
+            <button class="start-btn" id="startBtn" onclick="startDebate()">토론 시작</button>
+            <button class="stop-btn" id="stopBtn" onclick="stopDebate()">중지</button>
+        </div>
+        <div class="model-selectors">
+            <div class="model-select-group">
+                <label class="model-label claude">🔵 Claude 모델</label>
+                <select class="model-select claude-border" id="claudeModelSelect">
+                    {% for model_id, model_name in claude_models.items() %}
+                    <option value="{{ model_id }}" {{ 'selected' if model_id == 'claude-opus-4-6' }}>{{ model_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="model-select-group">
+                <label class="model-label gemini">🔴 Gemini 모델</label>
+                <select class="model-select gemini-border" id="geminiModelSelect">
+                    {% for model_id, model_name in gemini_models.items() %}
+                    <option value="{{ model_id }}" {{ 'selected' if model_id == 'gemini-web' }}>{{ model_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="examples" id="examples">
+        <div class="example-chip" onclick="setTopic('CTA 숏커버링 상태와 전망 분석')">CTA 숏커버링 분석</div>
+        <div class="example-chip" onclick="setTopic('2026년 미국 경기침체 가능성')">미국 경기침체 전망</div>
+        <div class="example-chip" onclick="setTopic('AI가 소프트웨어 개발자를 대체할 수 있는가')">AI vs 개발자</div>
+        <div class="example-chip" onclick="setTopic('비트코인은 디지털 금인가 투기 자산인가')">비트코인 본질</div>
+        <div class="example-chip" onclick="setTopic('한국 부동산 시장 향후 5년 전망')">한국 부동산 전망</div>
+    </div>
+
+    <!-- Saved debates panel -->
+    <div class="saved-panel">
+        <div class="saved-toggle" onclick="toggleSavedPanel()" id="savedToggle">
+            📁 저장된 토론 불러오기
+        </div>
+        <div class="saved-list" id="savedList"></div>
+    </div>
+
+    <div class="status-bar" id="statusBar"></div>
+
+    <!-- Action bar: save + continue after debate ends -->
+    <div class="action-bar" id="actionBar">
+        <button class="save-btn" onclick="saveCurrentDebate()">💾 토론 저장</button>
+        <button class="continue-btn" onclick="showContinueModal()">▶ 추가 라운드</button>
+    </div>
+
+    <div class="debate-container" id="debateContainer"></div>
+
+    <!-- Continue modal -->
+    <div class="continue-modal" id="continueModal" style="display:none">
+        <div class="continue-modal-box">
+            <h3>토론 이어서 진행</h3>
+            <p>심화 주제를 입력하거나 비워두면 기존 주제로 계속합니다.</p>
+            <input type="text" id="newTopic" placeholder="새 주제 (선택사항)">
+            <div class="continue-modal-hint">이전 토론 내용은 컨텍스트로 유지됩니다.</div>
+            <select id="additionalRounds">
+                <option value="1">1 라운드</option>
+                <option value="2" selected>2 라운드</option>
+                <option value="3">3 라운드</option>
+                <option value="4">4 라운드</option>
+            </select>
+            <div class="continue-modal-actions">
+                <button class="btn-cancel-modal" onclick="hideContinueModal()">취소</button>
+                <button class="btn-go-modal" onclick="continueCurrentDebate()">시작</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentRound = 0;
+        let currentRow = null;
+        let thinkingTimer = null;
+        let thinkingStartTime = null;
+        let abortController = null;
+        let currentSaveData = null;  // save_data from done event
+        let savedPanelOpen = false;
+        let pendingResumeId = null;  // debate ID to resume from
+
+        function setTopic(topic) {
+            document.getElementById('topicInput').value = topic;
+            document.getElementById('topicInput').focus();
+        }
+
+        // ── Saved debates panel ──────────────────────────────────────────
+
+        async function toggleSavedPanel() {
+            savedPanelOpen = !savedPanelOpen;
+            const list = document.getElementById('savedList');
+            const toggle = document.getElementById('savedToggle');
+            if (savedPanelOpen) {
+                list.style.display = 'block';
+                toggle.textContent = '📁 저장된 토론 불러오기 ▲';
+                await loadSavedList();
+            } else {
+                list.style.display = 'none';
+                toggle.textContent = '📁 저장된 토론 불러오기';
+            }
+        }
+
+        async function loadSavedList() {
+            const list = document.getElementById('savedList');
+            list.innerHTML = '<div style="padding:1rem;color:#555;text-align:center;font-size:0.85rem">불러오는 중...</div>';
+            try {
+                const res = await fetch('/debates');
+                const data = await res.json();
+                if (!data.debates || data.debates.length === 0) {
+                    list.innerHTML = '<div style="padding:1rem;color:#555;text-align:center;font-size:0.85rem">저장된 토론이 없습니다</div>';
+                    return;
+                }
+                list.innerHTML = data.debates.map(d => {
+                    const date = new Date(d.timestamp * 1000).toLocaleString('ko-KR', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+                    return `
+                    <div class="saved-item">
+                        <div class="saved-item-info">
+                            <div class="saved-item-topic">${escHtml(d.topic)}</div>
+                            <div class="saved-item-meta">${date} · ${d.last_round}라운드 완료</div>
+                        </div>
+                        <div class="saved-item-actions">
+                            <button class="btn-load" onclick="loadSavedDebate('${escHtml(d.id)}')">보기</button>
+                            <button class="btn-continue" onclick="resumeSavedDebate('${escHtml(d.id)}', '${escHtml(d.topic)}')">이어서</button>
+                            <button class="btn-delete" onclick="deleteSavedDebate('${escHtml(d.id)}', this)">삭제</button>
+                        </div>
+                    </div>`;
+                }).join('');
+            } catch (e) {
+                list.innerHTML = '<div style="padding:1rem;color:#f87171;font-size:0.85rem">불러오기 오류</div>';
+            }
+        }
+
+        function escHtml(s) {
+            return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        async function loadSavedDebate(id) {
+            const res = await fetch(`/debates/${encodeURIComponent(id)}`);
+            const data = await res.json();
+            if (data.error) { alert('토론을 불러올 수 없습니다.'); return; }
+
+            // Restore UI
+            document.getElementById('topicInput').value = data.topic || '';
+            const container = document.getElementById('debateContainer');
+            container.innerHTML = '';
+            currentRound = 0;
+            currentRow = null;
+            document.getElementById('examples').style.display = 'none';
+            document.getElementById('actionBar').style.display = 'none';
+
+            // Render research
+            if (data.research) {
+                const card = document.createElement('div');
+                card.className = 'research-card';
+                card.innerHTML = `<div class="research-title">📊 Gemini 자료 조사 결과</div><div class="message-content">${formatMarkdown(data.research)}</div>`;
+                container.appendChild(card);
+            }
+
+            // Render messages
+            renderRestoredMessages(data.messages || []);
+
+            // Render conclusion
+            if (data.conclusion) {
+                const roundHeader = document.createElement('div');
+                roundHeader.className = 'round-header';
+                roundHeader.innerHTML = '<span>📋 최종 결론</span>';
+                container.appendChild(roundHeader);
+                addConclusion(data.conclusion);
+            }
+
+            document.getElementById('statusBar').textContent = `✅ 저장된 토론: ${data.topic}`;
+            currentSaveData = data;
+
+            // Show action bar to allow continuing
+            const bar = document.getElementById('actionBar');
+            bar.style.display = 'flex';
+            // Hide save button (already saved), show continue
+            bar.querySelector('.save-btn').style.display = 'none';
+            const continueBtn = bar.querySelector('.continue-btn');
+            continueBtn.style.display = 'inline-block';
+            continueBtn.onclick = () => showContinueModal(data.topic);
+            pendingResumeId = id;
+        }
+
+        function renderRestoredMessages(messages) {
+            const container = document.getElementById('debateContainer');
+            // Group by round
+            const byRound = {};
+            for (const msg of messages) {
+                if (!byRound[msg.round]) byRound[msg.round] = [];
+                byRound[msg.round].push(msg);
+            }
+            for (const round of Object.keys(byRound).sort((a,b) => a-b)) {
+                const r = parseInt(round);
+                const phaseLabel = r === 1 ? '개회 분석' : `${r}라운드 반론`;
+                const roundHeader = document.createElement('div');
+                roundHeader.className = 'round-header';
+                roundHeader.innerHTML = `<span>${phaseLabel}</span>`;
+                container.appendChild(roundHeader);
+
+                const row = document.createElement('div');
+                row.className = 'debate-row';
+                container.appendChild(row);
+                currentRow = row;
+                currentRound = r;
+
+                for (const msg of byRound[round]) {
+                    const card = document.createElement('div');
+                    card.className = `message-card ${msg.agent}`;
+                    const label = msg.agent === 'claude' ? '🔵 Claude' : '🔴 Gemini';
+                    card.innerHTML = `<div class="agent-label ${msg.agent}">${label}</div><div class="message-content">${formatMarkdown(msg.content)}</div>`;
+                    row.appendChild(card);
+                }
+            }
+        }
+
+        async function deleteSavedDebate(id, btn) {
+            if (!confirm('이 토론 기록을 삭제하시겠습니까?')) return;
+            try {
+                await fetch(`/debates/${encodeURIComponent(id)}`, { method: 'DELETE' });
+                btn.closest('.saved-item').remove();
+            } catch (e) {
+                alert('삭제 중 오류가 발생했습니다.');
+            }
+        }
+
+        function resumeSavedDebate(id, topic) {
+            document.getElementById('topicInput').value = topic;
+            pendingResumeId = id;
+            showContinueModal(topic);
+        }
+
+        // ── Save ────────────────────────────────────────────────────────
+
+        async function autoSave(saveData) {
+            const bar = document.getElementById('actionBar');
+            bar.style.display = 'flex';
+            const saveBtn = bar.querySelector('.save-btn');
+            saveBtn.textContent = '💾 저장 중...';
+            saveBtn.disabled = true;
+            saveBtn.style.display = 'inline-block';
+            bar.querySelector('.continue-btn').style.display = 'inline-block';
+
+            try {
+                const res = await fetch('/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(saveData),
+                });
+                const data = await res.json();
+                if (data.success) {
+                    saveBtn.textContent = '✅ 자동 저장됨';
+                    pendingResumeId = data.id;
+                    if (savedPanelOpen) await loadSavedList();
+                } else {
+                    saveBtn.textContent = '❌ 저장 실패';
+                    saveBtn.disabled = false;
+                }
+            } catch (e) {
+                saveBtn.textContent = '❌ 저장 실패';
+                saveBtn.disabled = false;
+            }
+        }
+
+        async function saveCurrentDebate() {
+            if (!currentSaveData) return;
+            await autoSave(currentSaveData);
+        }
+
+        // ── Continue / resume modal ──────────────────────────────────────
+
+        function showContinueModal(originalTopic) {
+            // Reset new topic field
+            document.getElementById('newTopic').value = '';
+            if (originalTopic) {
+                document.getElementById('newTopic').placeholder = originalTopic;
+            }
+            document.getElementById('continueModal').style.display = 'flex';
+            setTimeout(() => document.getElementById('newTopic').focus(), 50);
+        }
+
+        function hideContinueModal() {
+            document.getElementById('continueModal').style.display = 'none';
+        }
+
+        async function continueCurrentDebate() {
+            hideContinueModal();
+            const additionalRounds = parseInt(document.getElementById('additionalRounds').value);
+            const claude_model = document.getElementById('claudeModelSelect').value;
+            const gemini_model = document.getElementById('geminiModelSelect').value;
+            const originalTopic = document.getElementById('topicInput').value.trim();
+            const newTopic = document.getElementById('newTopic').value.trim();
+
+            // Update topic input to reflect what's being debated
+            if (newTopic) {
+                document.getElementById('topicInput').value = newTopic;
+            }
+
+            await runDebate({
+                topic: originalTopic,
+                new_topic: newTopic || null,
+                rounds: additionalRounds,
+                claude_model,
+                gemini_model,
+                resume_from: pendingResumeId,
+            });
+        }
+
+        function formatMarkdown(text) {
+            let html = text
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+            html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+            html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+            html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+            html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+            html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+            html = html.replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
+            html = html.replace(/^[-•] (.+)$/gm, '<li>$1</li>');
+            html = html.replace(/\n\n/g, '</p><p>');
+            html = '<p>' + html + '</p>';
+            html = html.replace(/<p><\/p>/g, '');
+            html = html.replace(/<p>(<h[123]>)/g, '$1');
+            html = html.replace(/(<\/h[123]>)<\/p>/g, '$1');
+            return html;
+        }
+
+        function getModelNames() {
+            return {
+                claude: document.getElementById('claudeModelSelect').selectedOptions[0].text,
+                gemini: document.getElementById('geminiModelSelect').selectedOptions[0].text,
+            };
+        }
+
+        function stopThinkingTimer() {
+            if (thinkingTimer) {
+                clearInterval(thinkingTimer);
+                thinkingTimer = null;
+            }
+        }
+
+        function showThinking(agent, round, modelName) {
+            const container = document.getElementById('debateContainer');
+            const statusBar = document.getElementById('statusBar');
+            stopThinkingTimer();
+
+            const isResearch = (round === 0 && agent === 'gemini');
+
+            // Research phase - special handling
+            if (isResearch) {
+                const roundHeader = document.createElement('div');
+                roundHeader.className = 'round-header';
+                roundHeader.innerHTML = `<span>🔍 자료 조사</span>`;
+                container.appendChild(roundHeader);
+            }
+            // Ensure round header + row exist for debate rounds
+            else if (agent !== 'conclusion' && round !== currentRound) {
+                currentRound = round;
+                const roundHeader = document.createElement('div');
+                roundHeader.className = 'round-header';
+                const phaseLabel = round === 1 ? '개회 분석' : `${round}라운드 반론`;
+                roundHeader.innerHTML = `<span>${phaseLabel}</span>`;
+                container.appendChild(roundHeader);
+                currentRow = document.createElement('div');
+                currentRow.className = 'debate-row';
+                container.appendChild(currentRow);
+            }
+
+            // Conclusion thinking
+            if (agent === 'conclusion') {
+                const roundHeader = document.createElement('div');
+                roundHeader.className = 'round-header';
+                roundHeader.innerHTML = `<span>📋 최종 결론</span>`;
+                container.appendChild(roundHeader);
+            }
+
+            const emoji = isResearch ? '🔍' : agent === 'claude' ? '🔵' : agent === 'gemini' ? '🔴' : '📋';
+            const actionLabel = isResearch ? '자료 조사 중' : agent === 'conclusion' ? '결론 도출 중' : round === 1 ? '분석 중' : '반론 작성 중';
+            const cardClass = isResearch ? 'research' : agent;
+
+            const card = document.createElement('div');
+            card.className = `thinking-card ${cardClass}`;
+            card.id = 'thinking-active';
+            card.innerHTML = `
+                <div class="thinking-inner">
+                    <div class="thinking-dots"><span></span><span></span><span></span></div>
+                    <div class="thinking-label">${emoji} <span class="model-name">${modelName}</span> ${actionLabel}...</div>
+                    <div class="thinking-timer" id="thinkingElapsed">0.0s</div>
+                </div>
+            `;
+
+            if (agent === 'conclusion' || isResearch) {
+                card.style.maxWidth = '900px';
+                card.style.margin = '0 auto';
+                container.appendChild(card);
+            } else {
+                currentRow.appendChild(card);
+            }
+
+            card.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            statusBar.textContent = '';
+
+            // Start elapsed timer
+            thinkingStartTime = Date.now();
+            thinkingTimer = setInterval(() => {
+                const el = document.getElementById('thinkingElapsed');
+                if (el) {
+                    const elapsed = ((Date.now() - thinkingStartTime) / 1000).toFixed(1);
+                    el.textContent = `${elapsed}s`;
+                }
+            }, 100);
+        }
+
+        function removeThinking() {
+            stopThinkingTimer();
+            const el = document.getElementById('thinking-active');
+            if (el) el.remove();
+        }
+
+        function addMessage(agent, round, content) {
+            removeThinking();
+
+            const card = document.createElement('div');
+            card.className = `message-card ${agent}`;
+
+            const models = getModelNames();
+            const label = agent === 'claude' ? `🔵 ${models.claude}` : `🔴 ${models.gemini}`;
+            card.innerHTML = `
+                <div class="agent-label ${agent}">${label}</div>
+                <div class="message-content">${formatMarkdown(content)}</div>
+            `;
+
+            currentRow.appendChild(card);
+            card.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        }
+
+        function addConclusion(content) {
+            removeThinking();
+            const container = document.getElementById('debateContainer');
+
+            const card = document.createElement('div');
+            card.className = 'conclusion-card';
+            card.innerHTML = `
+                <div class="label">종합 결론</div>
+                <div class="message-content">${formatMarkdown(content)}</div>
+            `;
+            container.appendChild(card);
+            card.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        }
+
+        function stopDebate() {
+            if (abortController) {
+                abortController.abort();
+                abortController = null;
+            }
+        }
+
+        function setDebateUI(running) {
+            const startBtn = document.getElementById('startBtn');
+            const stopBtn = document.getElementById('stopBtn');
+            if (running) {
+                startBtn.style.display = 'none';
+                stopBtn.style.display = 'inline-block';
+                document.getElementById('actionBar').style.display = 'none';
+            } else {
+                startBtn.style.display = 'inline-block';
+                startBtn.disabled = false;
+                startBtn.textContent = '토론 시작';
+                stopBtn.style.display = 'none';
+            }
+        }
+
+        async function startDebate() {
+            const topic = document.getElementById('topicInput').value.trim();
+            if (!topic) return;
+            const rounds = document.getElementById('roundsSelect').value;
+            const claude_model = document.getElementById('claudeModelSelect').value;
+            const gemini_model = document.getElementById('geminiModelSelect').value;
+
+            // Clear previous state
+            const container = document.getElementById('debateContainer');
+            container.innerHTML = '';
+            currentRound = 0;
+            currentRow = null;
+            currentSaveData = null;
+            pendingResumeId = null;
+            document.getElementById('examples').style.display = 'none';
+
+            await runDebate({ topic, rounds, claude_model, gemini_model });
+        }
+
+        async function runDebate(params) {
+            const statusBar = document.getElementById('statusBar');
+            const container = document.getElementById('debateContainer');
+
+            setDebateUI(true);
+            abortController = new AbortController();
+
+            let response;
+            try {
+                response = await fetch('/debate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(params),
+                    signal: abortController.signal,
+                });
+            } catch (e) {
+                if (e.name === 'AbortError') {
+                    removeThinking();
+                    statusBar.textContent = '⏹ 토론이 중지되었습니다';
+                    setDebateUI(false);
+                    return;
+                }
+                throw e;
+            }
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+
+            try {
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop();
+
+                    let eventType = '';
+                    let eventData = '';
+
+                    for (const line of lines) {
+                        if (line.startsWith('event: ')) {
+                            eventType = line.slice(7);
+                        } else if (line.startsWith('data: ')) {
+                            eventData = line.slice(6);
+
+                            if (eventType && eventData) {
+                                try {
+                                    const data = JSON.parse(eventData);
+
+                                    if (eventType === 'thinking') {
+                                        showThinking(data.agent, data.round, data.model);
+
+                                    } else if (eventType === 'loaded') {
+                                        // Resume: restore saved debate UI first
+                                        removeThinking();
+                                        container.innerHTML = '';
+                                        currentRound = 0;
+                                        currentRow = null;
+                                        if (data.research) {
+                                            const c = document.createElement('div');
+                                            c.className = 'research-card';
+                                            c.innerHTML = `<div class="research-title">📊 Gemini 자료 조사 결과</div><div class="message-content">${formatMarkdown(data.research)}</div>`;
+                                            container.appendChild(c);
+                                        }
+                                        renderRestoredMessages(data.messages || []);
+                                        if (data.conclusion) {
+                                            const rh = document.createElement('div');
+                                            rh.className = 'round-header';
+                                            rh.innerHTML = '<span>📋 최종 결론</span>';
+                                            container.appendChild(rh);
+                                            addConclusion(data.conclusion);
+                                        }
+                                        // Separator for new rounds
+                                        const sep = document.createElement('div');
+                                        sep.className = 'round-header';
+                                        const sepLabel = data.new_topic
+                                            ? `▶ 심화 토론: ${data.new_topic} (${data.last_round + 1}라운드~)`
+                                            : `▶ 추가 토론 (${data.last_round + 1}라운드~)`;
+                                        sep.innerHTML = `<span>${sepLabel}</span>`;
+                                        container.appendChild(sep);
+
+                                    } else if (eventType === 'status') {
+                                        removeThinking();
+                                        statusBar.textContent = data.message || '';
+
+                                    } else if (eventType === 'research') {
+                                        removeThinking();
+                                        const headers = container.querySelectorAll('.round-header');
+                                        for (const h of headers) {
+                                            if (h.textContent.includes('자료 조사')) h.remove();
+                                        }
+                                        const card = document.createElement('div');
+                                        card.className = 'research-card';
+                                        card.innerHTML = `<div class="research-title">📊 Gemini 자료 조사 결과</div><div class="message-content">${formatMarkdown(data.content)}</div>`;
+                                        container.appendChild(card);
+                                        card.scrollIntoView({ behavior: 'smooth', block: 'end' });
+
+                                    } else if (eventType === 'message') {
+                                        addMessage(data.agent, data.round, data.content);
+
+                                    } else if (eventType === 'conclusion') {
+                                        addConclusion(data.content);
+
+                                    } else if (eventType === 'error') {
+                                        removeThinking();
+                                        const card = document.createElement('div');
+                                        card.className = 'error-card';
+                                        card.innerHTML = `<div class="error-title">토론 중단</div><div>${data.message}</div>`;
+                                        container.appendChild(card);
+                                        card.scrollIntoView({ behavior: 'smooth', block: 'end' });
+
+                                    } else if (eventType === 'done') {
+                                        statusBar.textContent = '✅ 토론 완료';
+                                        if (data.save_data) {
+                                            currentSaveData = data.save_data;
+                                            // Auto-save
+                                            autoSave(data.save_data);
+                                        }
+                                    }
+                                } catch (err) {
+                                    console.error('Parse error:', err);
+                                }
+                            }
+                            eventType = '';
+                            eventData = '';
+                        }
+                    }
+                }
+            } catch (e) {
+                if (e.name === 'AbortError') {
+                    removeThinking();
+                    statusBar.textContent = '⏹ 토론이 중지되었습니다';
+                } else {
+                    throw e;
+                }
+            }
+
+            stopThinkingTimer();
+            setDebateUI(false);
+            abortController = null;
+        }
+    </script>
+</body>
+</html>
