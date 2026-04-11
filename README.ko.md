@@ -35,8 +35,6 @@ Claude Pro와 Google One AI Plus를 이미 구독 중이라면, 각 요금제에
 - **Python 3.9+**
 - **Claude Code CLI** 설치 및 로그인 (`claude` 명령어 사용 가능한 상태)
 - **Naver Whale 브라우저** — Gemini(gemini.google.com)에 Google 계정으로 로그인된 상태
-- **Playwright** (`pip install playwright && playwright install chromium`)
-
 ## 설치
 
 ```bash
@@ -44,8 +42,6 @@ git clone <repo>
 cd debate-arena
 
 pip install -r requirements.txt
-pip install playwright
-playwright install chromium
 ```
 
 ## 실행
@@ -82,8 +78,7 @@ debate-arena/
 ├── templates/
 │   └── index.html      # 프론트엔드 (SSE 스트리밍 UI)
 ├── debates/            # 저장된 토론 JSON 파일
-├── requirements.txt
-└── test_gemini_web.py  # Gemini 웹 연동 디버깅용
+└── requirements.txt
 ```
 
 ## 기술 스택
@@ -93,7 +88,7 @@ debate-arena/
 | 백엔드 | Python, Starlette, Uvicorn |
 | 프론트엔드 | Vanilla JS, SSE |
 | Claude 연동 | Claude Code CLI (`claude -p`) |
-| Gemini 연동 | Whale 브라우저 AppleScript + Playwright CDP |
+| Gemini 연동 | Whale 브라우저 AppleScript (osascript) |
 | 인코딩 | Base64 (AppleScript→JS 다중 이스케이프 우회) |
 
 ## Gemini 브라우저 자동화 원리

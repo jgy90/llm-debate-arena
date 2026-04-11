@@ -35,8 +35,6 @@ If you already pay for Claude Pro and Google One AI Plus, you can run debates wi
 - **Python 3.9+**
 - **Claude Code CLI** — installed and logged in (`claude` command available)
 - **Naver Whale browser** — logged into Google account at gemini.google.com
-- **Playwright** (`pip install playwright && playwright install chromium`)
-
 ## Installation
 
 ```bash
@@ -44,8 +42,6 @@ git clone <repo>
 cd debate-arena
 
 pip install -r requirements.txt
-pip install playwright
-playwright install chromium
 ```
 
 ## Running
@@ -82,8 +78,7 @@ debate-arena/
 ├── templates/
 │   └── index.html      # Frontend (SSE streaming UI)
 ├── debates/            # Saved debate JSON files
-├── requirements.txt
-└── test_gemini_web.py  # Gemini browser automation debugger
+└── requirements.txt
 ```
 
 ## Tech Stack
@@ -93,7 +88,7 @@ debate-arena/
 | Backend | Python, Starlette, Uvicorn |
 | Frontend | Vanilla JS, SSE |
 | Claude integration | Claude Code CLI (`claude -p`) |
-| Gemini integration | Whale browser AppleScript + Playwright CDP |
+| Gemini integration | Whale browser AppleScript (osascript) |
 | Encoding | Base64 (bypasses AppleScript → JS multi-layer escaping) |
 
 ## How the Gemini Browser Automation Works
