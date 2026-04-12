@@ -879,6 +879,11 @@
                 <div class="toggle-dot"></div>
                 <span class="option-label">⚓ 앵커링 방지</span>
             </label>
+            <label class="option-toggle active" id="fastConclusionToggle" onclick="toggleFastConclusion()">
+                <input type="checkbox" id="fastConclusionCheck" checked>
+                <div class="toggle-dot"></div>
+                <span class="option-label">⚡ 결론 Haiku</span>
+            </label>
         </div>
     </div>
 
@@ -946,6 +951,13 @@
         function toggleAntiAnchor() {
             const toggle = document.getElementById('antiAnchorToggle');
             const check = document.getElementById('antiAnchorCheck');
+            check.checked = !check.checked;
+            toggle.classList.toggle('active', check.checked);
+        }
+
+        function toggleFastConclusion() {
+            const toggle = document.getElementById('fastConclusionToggle');
+            const check = document.getElementById('fastConclusionCheck');
             check.checked = !check.checked;
             toggle.classList.toggle('active', check.checked);
         }
@@ -1378,6 +1390,7 @@
             const role_mode = document.getElementById('roleModeSelect').value || null;
             const anti_anchor = document.getElementById('antiAnchorCheck').checked;
             const role_swap = roleSwapped;
+            const fast_conclusion = document.getElementById('fastConclusionCheck').checked;
 
             // Clear previous state
             const container = document.getElementById('debateContainer');
@@ -1388,7 +1401,7 @@
             pendingResumeId = null;
             document.getElementById('examples').style.display = 'none';
 
-            await runDebate({ topic, rounds, claude_model, gemini_model, role_mode, anti_anchor, role_swap });
+            await runDebate({ topic, rounds, claude_model, gemini_model, role_mode, anti_anchor, role_swap, fast_conclusion });
         }
 
         async function runDebate(params) {
