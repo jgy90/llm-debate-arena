@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -19,7 +19,31 @@
             padding: 2rem 1rem 1rem;
             background: linear-gradient(180deg, #12121a 0%, #0a0a0f 100%);
             border-bottom: 1px solid #1a1a2e;
+            position: relative;
         }
+
+        .lang-picker {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            display: flex;
+            gap: 0.25rem;
+        }
+
+        .lang-btn {
+            padding: 0.3rem 0.6rem;
+            background: transparent;
+            border: 1px solid #2a2a3e;
+            border-radius: 6px;
+            color: #555;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .lang-btn:hover { color: #888; border-color: #555; }
+        .lang-btn.active { color: #a5b4fc; border-color: #6366f1; background: rgba(99,102,241,0.1); }
 
         .header h1 {
             font-size: 2rem;
@@ -821,27 +845,33 @@
 </head>
 <body>
     <div class="header">
+        <div class="lang-picker">
+            <button class="lang-btn active" id="langBtn-en" onclick="setLang('en')">EN</button>
+            <button class="lang-btn" id="langBtn-ko" onclick="setLang('ko')">KO</button>
+            <button class="lang-btn" id="langBtn-es" onclick="setLang('es')">ES</button>
+        </div>
         <h1>⚔️ AI Debate Arena</h1>
-        <p>Claude와 Gemini가 토론하고, 함께 결론을 도출합니다</p>
+        <p data-i18n="subtitle">Claude and Gemini debate live, reaching conclusions together</p>
     </div>
 
     <div class="input-area">
         <div class="input-group">
             <input type="text" class="topic-input" id="topicInput"
-                   placeholder="토론 주제를 입력하세요..."
+                   data-i18n-placeholder="topicPlaceholder"
+                   placeholder="Enter a debate topic..."
                    onkeydown="if(event.key==='Enter') startDebate()">
             <select class="rounds-select" id="roundsSelect">
-                <option value="2">2 라운드</option>
-                <option value="3" selected>3 라운드</option>
-                <option value="4">4 라운드</option>
-                <option value="5">5 라운드</option>
+                <option value="2" data-i18n="round2">2 rounds</option>
+                <option value="3" selected data-i18n="round3">3 rounds</option>
+                <option value="4" data-i18n="round4">4 rounds</option>
+                <option value="5" data-i18n="round5">5 rounds</option>
             </select>
-            <button class="start-btn" id="startBtn" onclick="startDebate()">토론 시작</button>
-            <button class="stop-btn" id="stopBtn" onclick="stopDebate()">중지</button>
+            <button class="start-btn" id="startBtn" onclick="startDebate()" data-i18n="startBtn">Start Debate</button>
+            <button class="stop-btn" id="stopBtn" onclick="stopDebate()" data-i18n="stopBtn">Stop</button>
         </div>
         <div class="model-selectors">
             <div class="model-select-group">
-                <label class="model-label claude">🔵 Claude 모델</label>
+                <label class="model-label claude" data-i18n="claudeModel">🔵 Claude Model</label>
                 <select class="model-select claude-border" id="claudeModelSelect">
                     {% for model_id, model_name in claude_models.items() %}
                     <option value="{{ model_id }}" {{ 'selected' if model_id == 'claude-opus-4-6' }}>{{ model_name }}</option>
@@ -849,7 +879,7 @@
                 </select>
             </div>
             <div class="model-select-group">
-                <label class="model-label gemini">🔴 Gemini 모델</label>
+                <label class="model-label gemini" data-i18n="geminiModel">🔴 Gemini Model</label>
                 <select class="model-select gemini-border" id="geminiModelSelect">
                     {% for model_id, model_name in gemini_models.items() %}
                     <option value="{{ model_id }}" {{ 'selected' if model_id == 'gemini-web' }}>{{ model_name }}</option>
@@ -859,46 +889,40 @@
         </div>
         <div class="debate-options">
             <div class="option-group">
-                <label class="option-label">🎭 역할 고정</label>
+                <label class="option-label" data-i18n="roleLabel">🎭 Role</label>
                 <select class="option-select" id="roleModeSelect" onchange="onRoleModeChange()">
-                    <option value="">없음</option>
-                    <option value="bull_bear">강세론 vs 약세론</option>
-                    <option value="optimist_pessimist">낙관론 vs 비관론</option>
-                    <option value="pro_con">찬성 vs 반대</option>
-                    <option value="tradition_innovation">전통 vs 혁신</option>
+                    <option value="" data-i18n="roleNone">None</option>
+                    <option value="bull_bear" data-i18n="roleBullBear">Bull vs Bear</option>
+                    <option value="optimist_pessimist" data-i18n="roleOptPess">Optimist vs Pessimist</option>
+                    <option value="pro_con" data-i18n="roleProCon">Pro vs Con</option>
+                    <option value="tradition_innovation" data-i18n="roleTradInn">Tradition vs Innovation</option>
                 </select>
             </div>
             <div class="role-assignment" id="roleAssignment">
                 <span class="ra-claude">🔵 <span id="claudeRoleLabel"></span></span>
                 <span class="ra-sep">vs</span>
                 <span class="ra-gemini">🔴 <span id="geminiRoleLabel"></span></span>
-                <button class="swap-btn" onclick="swapRoles()" title="역할 교체">⇄</button>
+                <button class="swap-btn" onclick="swapRoles()" id="swapBtn" data-i18n-title="swapTitle" title="Swap roles">⇄</button>
             </div>
             <label class="option-toggle active" id="antiAnchorToggle" onclick="toggleAntiAnchor()">
                 <input type="checkbox" id="antiAnchorCheck" checked>
                 <div class="toggle-dot"></div>
-                <span class="option-label">⚓ 앵커링 방지</span>
+                <span class="option-label" data-i18n="antiAnchor">⚓ Anti-Anchoring</span>
             </label>
             <label class="option-toggle active" id="fastConclusionToggle" onclick="toggleFastConclusion()">
                 <input type="checkbox" id="fastConclusionCheck" checked>
                 <div class="toggle-dot"></div>
-                <span class="option-label">⚡ 결론 Haiku</span>
+                <span class="option-label" data-i18n="fastConclusion">⚡ Haiku Conclusion</span>
             </label>
         </div>
     </div>
 
-    <div class="examples" id="examples">
-        <div class="example-chip" onclick="setTopic('CTA 숏커버링 상태와 전망 분석')">CTA 숏커버링 분석</div>
-        <div class="example-chip" onclick="setTopic('2026년 미국 경기침체 가능성')">미국 경기침체 전망</div>
-        <div class="example-chip" onclick="setTopic('AI가 소프트웨어 개발자를 대체할 수 있는가')">AI vs 개발자</div>
-        <div class="example-chip" onclick="setTopic('비트코인은 디지털 금인가 투기 자산인가')">비트코인 본질</div>
-        <div class="example-chip" onclick="setTopic('한국 부동산 시장 향후 5년 전망')">한국 부동산 전망</div>
-    </div>
+    <div class="examples" id="examples"></div>
 
     <!-- Saved debates panel -->
     <div class="saved-panel">
-        <div class="saved-toggle" onclick="toggleSavedPanel()" id="savedToggle">
-            📁 저장된 토론 불러오기
+        <div class="saved-toggle" onclick="toggleSavedPanel()" id="savedToggle" data-i18n="savedToggle">
+            📁 Load saved debate
         </div>
         <div class="saved-list" id="savedList"></div>
     </div>
@@ -907,8 +931,8 @@
 
     <!-- Action bar: save + continue after debate ends -->
     <div class="action-bar" id="actionBar">
-        <button class="save-btn" onclick="saveCurrentDebate()">💾 토론 저장</button>
-        <button class="continue-btn" onclick="showContinueModal()">▶ 추가 라운드</button>
+        <button class="save-btn" onclick="saveCurrentDebate()" data-i18n="saveBtn">💾 Save Debate</button>
+        <button class="continue-btn" onclick="showContinueModal()" data-i18n="continueBtn">▶ Additional Rounds</button>
     </div>
 
     <div class="debate-container" id="debateContainer"></div>
@@ -916,19 +940,19 @@
     <!-- Continue modal -->
     <div class="continue-modal" id="continueModal" style="display:none">
         <div class="continue-modal-box">
-            <h3>토론 이어서 진행</h3>
-            <p>심화 주제를 입력하거나 비워두면 기존 주제로 계속합니다.</p>
-            <input type="text" id="newTopic" placeholder="새 주제 (선택사항)">
-            <div class="continue-modal-hint">이전 토론 내용은 컨텍스트로 유지됩니다.</div>
+            <h3 data-i18n="modalTitle">Continue Debate</h3>
+            <p data-i18n="modalDesc">Enter a deeper topic or leave empty to continue with current topic.</p>
+            <input type="text" id="newTopic" data-i18n-placeholder="newTopicPlaceholder" placeholder="New topic (optional)">
+            <div class="continue-modal-hint" data-i18n="modalHint">Previous debate content is preserved as context.</div>
             <select id="additionalRounds">
-                <option value="1">1 라운드</option>
-                <option value="2" selected>2 라운드</option>
-                <option value="3">3 라운드</option>
-                <option value="4">4 라운드</option>
+                <option value="1" data-i18n="round1">1 round</option>
+                <option value="2" selected data-i18n="round2">2 rounds</option>
+                <option value="3" data-i18n="round3">3 rounds</option>
+                <option value="4" data-i18n="round4">4 rounds</option>
             </select>
             <div class="continue-modal-actions">
-                <button class="btn-cancel-modal" onclick="hideContinueModal()">취소</button>
-                <button class="btn-go-modal" onclick="continueCurrentDebate()">시작</button>
+                <button class="btn-cancel-modal" onclick="hideContinueModal()" data-i18n="cancelBtn">Cancel</button>
+                <button class="btn-go-modal" onclick="continueCurrentDebate()" data-i18n="goBtn">Start</button>
             </div>
         </div>
     </div>
@@ -942,6 +966,201 @@
         let currentSaveData = null;  // save_data from done event
         let savedPanelOpen = false;
         let pendingResumeId = null;  // debate ID to resume from
+        let currentLang = 'en';
+
+        // ── Translations ────────────────────────────────────────────────
+        const TRANSLATIONS = {
+            en: {
+                subtitle: 'Claude and Gemini debate live, reaching conclusions together',
+                topicPlaceholder: 'Enter a debate topic...',
+                round1: '1 round', round2: '2 rounds', round3: '3 rounds', round4: '4 rounds', round5: '5 rounds',
+                startBtn: 'Start Debate', stopBtn: 'Stop',
+                claudeModel: '🔵 Claude Model', geminiModel: '🔴 Gemini Model',
+                roleLabel: '🎭 Role', roleNone: 'None',
+                roleBullBear: 'Bull vs Bear', roleOptPess: 'Optimist vs Pessimist',
+                roleProCon: 'Pro vs Con', roleTradInn: 'Tradition vs Innovation',
+                antiAnchor: '⚓ Anti-Anchoring', fastConclusion: '⚡ Haiku Conclusion',
+                savedToggle: '📁 Load saved debate', savedToggleOpen: '📁 Load saved debate ▲',
+                saveBtn: '💾 Save Debate', continueBtn: '▶ Additional Rounds',
+                savedLoading: 'Loading...', savedEmpty: 'No saved debates', savedError: 'Error loading',
+                roundsCompleted: 'rounds completed',
+                viewBtn: 'View', continueItemBtn: 'Continue', deleteBtn: 'Delete',
+                deleteConfirm: 'Delete this debate record?', deleteError: 'Error deleting.',
+                loadError: 'Cannot load debate.',
+                modalTitle: 'Continue Debate',
+                modalDesc: 'Enter a deeper topic or leave empty to continue with current topic.',
+                newTopicPlaceholder: 'New topic (optional)',
+                modalHint: 'Previous debate content is preserved as context.',
+                cancelBtn: 'Cancel', goBtn: 'Start',
+                researchTitle: '📊 Gemini Research Results',
+                conclusionLabel: 'Synthesis', errorTitle: 'Debate Interrupted',
+                savingText: '💾 Saving...', savedText: '✅ Auto-saved', saveFailText: '❌ Save failed',
+                debateDone: '✅ Debate complete', debateStopped: '⏹ Debate stopped',
+                savedDebateLoaded: '✅ Saved debate: ',
+                researchPhase: '🔍 Research', openingPhase: 'Opening Analysis',
+                rebuttalPhase: 'Round {n} Rebuttal', conclusionPhase: '📋 Final Conclusion',
+                continuationPhase: '▶ Additional Rounds', deeperPhase: '▶ Deeper Debate: {topic}',
+                thinking_research: 'Researching', thinking_analysis: 'Analyzing',
+                thinking_rebuttal: 'Writing rebuttal', thinking_conclusion: 'Generating conclusion',
+                thinking_context: 'Restoring context', swapTitle: 'Swap roles',
+                examples: [
+                    { label: 'AI vs Developers', topic: 'Can AI replace software developers?' },
+                    { label: 'Bitcoin: Gold or Speculation?', topic: 'Is Bitcoin digital gold or a speculative asset?' },
+                    { label: 'US Recession 2026', topic: 'Will the US enter a recession in 2026?' },
+                    { label: 'Remote Work Future', topic: 'Is remote work better than office work long-term?' },
+                    { label: 'Nuclear Energy', topic: 'Should countries expand nuclear energy for climate goals?' },
+                ],
+            },
+            ko: {
+                subtitle: 'Claude와 Gemini가 토론하고, 함께 결론을 도출합니다',
+                topicPlaceholder: '토론 주제를 입력하세요...',
+                round1: '1 라운드', round2: '2 라운드', round3: '3 라운드', round4: '4 라운드', round5: '5 라운드',
+                startBtn: '토론 시작', stopBtn: '중지',
+                claudeModel: '🔵 Claude 모델', geminiModel: '🔴 Gemini 모델',
+                roleLabel: '🎭 역할 고정', roleNone: '없음',
+                roleBullBear: '강세론 vs 약세론', roleOptPess: '낙관론 vs 비관론',
+                roleProCon: '찬성 vs 반대', roleTradInn: '전통 vs 혁신',
+                antiAnchor: '⚓ 앵커링 방지', fastConclusion: '⚡ 결론 Haiku',
+                savedToggle: '📁 저장된 토론 불러오기', savedToggleOpen: '📁 저장된 토론 불러오기 ▲',
+                saveBtn: '💾 토론 저장', continueBtn: '▶ 추가 라운드',
+                savedLoading: '불러오는 중...', savedEmpty: '저장된 토론이 없습니다', savedError: '불러오기 오류',
+                roundsCompleted: '라운드 완료',
+                viewBtn: '보기', continueItemBtn: '이어서', deleteBtn: '삭제',
+                deleteConfirm: '이 토론 기록을 삭제하시겠습니까?', deleteError: '삭제 중 오류가 발생했습니다.',
+                loadError: '토론을 불러올 수 없습니다.',
+                modalTitle: '토론 이어서 진행',
+                modalDesc: '심화 주제를 입력하거나 비워두면 기존 주제로 계속합니다.',
+                newTopicPlaceholder: '새 주제 (선택사항)',
+                modalHint: '이전 토론 내용은 컨텍스트로 유지됩니다.',
+                cancelBtn: '취소', goBtn: '시작',
+                researchTitle: '📊 Gemini 자료 조사 결과',
+                conclusionLabel: '종합 결론', errorTitle: '토론 중단',
+                savingText: '💾 저장 중...', savedText: '✅ 자동 저장됨', saveFailText: '❌ 저장 실패',
+                debateDone: '✅ 토론 완료', debateStopped: '⏹ 토론이 중지되었습니다',
+                savedDebateLoaded: '✅ 저장된 토론: ',
+                researchPhase: '🔍 자료 조사', openingPhase: '개회 분석',
+                rebuttalPhase: '{n}라운드 반론', conclusionPhase: '📋 최종 결론',
+                continuationPhase: '▶ 추가 토론', deeperPhase: '▶ 심화 토론: {topic}',
+                thinking_research: '자료 조사 중', thinking_analysis: '분석 중',
+                thinking_rebuttal: '반론 작성 중', thinking_conclusion: '결론 도출 중',
+                thinking_context: '컨텍스트 복원 중', swapTitle: '역할 교체',
+                examples: [
+                    { label: 'CTA 숏커버링 분석', topic: 'CTA 숏커버링 상태와 전망 분석' },
+                    { label: '미국 경기침체 전망', topic: '2026년 미국 경기침체 가능성' },
+                    { label: 'AI vs 개발자', topic: 'AI가 소프트웨어 개발자를 대체할 수 있는가' },
+                    { label: '비트코인 본질', topic: '비트코인은 디지털 금인가 투기 자산인가' },
+                    { label: '한국 부동산 전망', topic: '한국 부동산 시장 향후 5년 전망' },
+                ],
+            },
+            es: {
+                subtitle: 'Claude y Gemini debaten en vivo, llegando a conclusiones juntos',
+                topicPlaceholder: 'Ingresa un tema de debate...',
+                round1: '1 ronda', round2: '2 rondas', round3: '3 rondas', round4: '4 rondas', round5: '5 rondas',
+                startBtn: 'Iniciar Debate', stopBtn: 'Detener',
+                claudeModel: '🔵 Modelo Claude', geminiModel: '🔴 Modelo Gemini',
+                roleLabel: '🎭 Rol', roleNone: 'Ninguno',
+                roleBullBear: 'Alcista vs Bajista', roleOptPess: 'Optimista vs Pesimista',
+                roleProCon: 'A favor vs En contra', roleTradInn: 'Tradición vs Innovación',
+                antiAnchor: '⚓ Anti-anclaje', fastConclusion: '⚡ Conclusión Haiku',
+                savedToggle: '📁 Cargar debate guardado', savedToggleOpen: '📁 Cargar debate guardado ▲',
+                saveBtn: '💾 Guardar Debate', continueBtn: '▶ Rondas adicionales',
+                savedLoading: 'Cargando...', savedEmpty: 'No hay debates guardados', savedError: 'Error al cargar',
+                roundsCompleted: 'rondas completadas',
+                viewBtn: 'Ver', continueItemBtn: 'Continuar', deleteBtn: 'Eliminar',
+                deleteConfirm: '¿Eliminar este registro de debate?', deleteError: 'Error al eliminar.',
+                loadError: 'No se puede cargar el debate.',
+                modalTitle: 'Continuar Debate',
+                modalDesc: 'Ingresa un tema más profundo o deja vacío para continuar con el tema actual.',
+                newTopicPlaceholder: 'Nuevo tema (opcional)',
+                modalHint: 'El contenido del debate anterior se conserva como contexto.',
+                cancelBtn: 'Cancelar', goBtn: 'Iniciar',
+                researchTitle: '📊 Resultados de Investigación de Gemini',
+                conclusionLabel: 'Conclusión', errorTitle: 'Debate Interrumpido',
+                savingText: '💾 Guardando...', savedText: '✅ Guardado automáticamente', saveFailText: '❌ Error al guardar',
+                debateDone: '✅ Debate completado', debateStopped: '⏹ Debate detenido',
+                savedDebateLoaded: '✅ Debate cargado: ',
+                researchPhase: '🔍 Investigación', openingPhase: 'Análisis Inicial',
+                rebuttalPhase: 'Ronda {n} Réplica', conclusionPhase: '📋 Conclusión Final',
+                continuationPhase: '▶ Rondas Adicionales', deeperPhase: '▶ Debate Profundo: {topic}',
+                thinking_research: 'Investigando', thinking_analysis: 'Analizando',
+                thinking_rebuttal: 'Escribiendo réplica', thinking_conclusion: 'Generando conclusión',
+                thinking_context: 'Restaurando contexto', swapTitle: 'Intercambiar roles',
+                examples: [
+                    { label: 'IA vs Desarrolladores', topic: '¿Puede la IA reemplazar a los desarrolladores de software?' },
+                    { label: 'Bitcoin: ¿Oro o especulación?', topic: '¿Es Bitcoin oro digital o un activo especulativo?' },
+                    { label: 'Recesión EEUU 2026', topic: '¿Entrará EEUU en recesión en 2026?' },
+                    { label: 'Trabajo remoto', topic: '¿Es el trabajo remoto mejor que la oficina a largo plazo?' },
+                    { label: 'Energía nuclear', topic: '¿Deben los países expandir la energía nuclear para el clima?' },
+                ],
+            },
+        };
+
+        const ROLE_LABELS_I18N = {
+            en: {
+                'bull_bear':            ['Bull (Optimist)', 'Bear (Pessimist)'],
+                'optimist_pessimist':   ['Optimist', 'Pessimist'],
+                'pro_con':              ['Pro', 'Con'],
+                'tradition_innovation': ['Traditional View', 'Innovative View'],
+            },
+            ko: {
+                'bull_bear':            ['강세론자 (Bull)', '약세론자 (Bear)'],
+                'optimist_pessimist':   ['낙관론자', '비관론자'],
+                'pro_con':              ['찬성측', '반대측'],
+                'tradition_innovation': ['전통적 관점', '혁신적 관점'],
+            },
+            es: {
+                'bull_bear':            ['Alcista (Bull)', 'Bajista (Bear)'],
+                'optimist_pessimist':   ['Optimista', 'Pesimista'],
+                'pro_con':              ['A favor', 'En contra'],
+                'tradition_innovation': ['Visión Tradicional', 'Visión Innovadora'],
+            },
+        };
+
+        function t(key) {
+            return (TRANSLATIONS[currentLang] || TRANSLATIONS.en)[key] || key;
+        }
+
+        function setLang(lang) {
+            currentLang = lang;
+            ['en', 'ko', 'es'].forEach(l => {
+                document.getElementById('langBtn-' + l).classList.toggle('active', l === lang);
+            });
+            document.documentElement.lang = lang;
+            applyLang();
+        }
+
+        function applyLang() {
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                el.textContent = t(el.getAttribute('data-i18n'));
+            });
+            document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+                el.placeholder = t(el.getAttribute('data-i18n-placeholder'));
+            });
+            document.querySelectorAll('[data-i18n-title]').forEach(el => {
+                el.title = t(el.getAttribute('data-i18n-title'));
+            });
+            // Saved panel toggle (may have ▲ suffix)
+            const savedToggle = document.getElementById('savedToggle');
+            savedToggle.textContent = savedPanelOpen ? t('savedToggleOpen') : t('savedToggle');
+            // Re-render examples for current lang
+            renderExamples();
+            // Re-render role assignment if visible
+            updateRoleAssignment();
+            // Update start button if it's showing default text
+            const startBtn = document.getElementById('startBtn');
+            if (startBtn.style.display !== 'none') {
+                startBtn.textContent = t('startBtn');
+            }
+        }
+
+        function renderExamples() {
+            const examples = document.getElementById('examples');
+            const ex = t('examples');
+            if (!Array.isArray(ex)) return;
+            examples.innerHTML = ex.map(e =>
+                `<div class="example-chip" onclick="setTopic(${JSON.stringify(e.topic)})">${escHtml(e.label)}</div>`
+            ).join('');
+        }
 
         function setTopic(topic) {
             document.getElementById('topicInput').value = topic;
@@ -962,13 +1181,6 @@
             toggle.classList.toggle('active', check.checked);
         }
 
-        const ROLE_LABELS = {
-            'bull_bear':            ['강세론자 (Bull)', '약세론자 (Bear)'],
-            'optimist_pessimist':   ['낙관론자', '비관론자'],
-            'pro_con':              ['찬성측', '반대측'],
-            'tradition_innovation': ['전통적 관점', '혁신적 관점'],
-        };
-
         let roleSwapped = false;
 
         function onRoleModeChange() {
@@ -986,9 +1198,9 @@
             const box = document.getElementById('roleAssignment');
             if (!mode) { box.style.display = 'none'; return; }
 
-            const [r1, r2] = ROLE_LABELS[mode];
-            document.getElementById('claudeRoleLabel').textContent = roleSwapped ? r2 : r1;
-            document.getElementById('geminiRoleLabel').textContent = roleSwapped ? r1 : r2;
+            const labels = (ROLE_LABELS_I18N[currentLang] || ROLE_LABELS_I18N.en)[mode] || ['?', '?'];
+            document.getElementById('claudeRoleLabel').textContent = roleSwapped ? labels[1] : labels[0];
+            document.getElementById('geminiRoleLabel').textContent = roleSwapped ? labels[0] : labels[1];
             box.style.display = 'flex';
         }
 
@@ -1000,41 +1212,41 @@
             const toggle = document.getElementById('savedToggle');
             if (savedPanelOpen) {
                 list.style.display = 'block';
-                toggle.textContent = '📁 저장된 토론 불러오기 ▲';
+                toggle.textContent = t('savedToggleOpen');
                 await loadSavedList();
             } else {
                 list.style.display = 'none';
-                toggle.textContent = '📁 저장된 토론 불러오기';
+                toggle.textContent = t('savedToggle');
             }
         }
 
         async function loadSavedList() {
             const list = document.getElementById('savedList');
-            list.innerHTML = '<div style="padding:1rem;color:#555;text-align:center;font-size:0.85rem">불러오는 중...</div>';
+            list.innerHTML = `<div style="padding:1rem;color:#555;text-align:center;font-size:0.85rem">${t('savedLoading')}</div>`;
             try {
                 const res = await fetch('/debates');
                 const data = await res.json();
                 if (!data.debates || data.debates.length === 0) {
-                    list.innerHTML = '<div style="padding:1rem;color:#555;text-align:center;font-size:0.85rem">저장된 토론이 없습니다</div>';
+                    list.innerHTML = `<div style="padding:1rem;color:#555;text-align:center;font-size:0.85rem">${t('savedEmpty')}</div>`;
                     return;
                 }
                 list.innerHTML = data.debates.map(d => {
-                    const date = new Date(d.timestamp * 1000).toLocaleString('ko-KR', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+                    const date = new Date(d.timestamp * 1000).toLocaleString(undefined, {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
                     return `
                     <div class="saved-item">
                         <div class="saved-item-info">
                             <div class="saved-item-topic">${escHtml(d.topic)}</div>
-                            <div class="saved-item-meta">${date} · ${d.last_round}라운드 완료</div>
+                            <div class="saved-item-meta">${date} · ${d.last_round} ${t('roundsCompleted')}</div>
                         </div>
                         <div class="saved-item-actions">
-                            <button class="btn-load" onclick="loadSavedDebate('${escHtml(d.id)}')">보기</button>
-                            <button class="btn-continue" onclick="resumeSavedDebate('${escHtml(d.id)}', '${escHtml(d.topic)}')">이어서</button>
-                            <button class="btn-delete" onclick="deleteSavedDebate('${escHtml(d.id)}', this)">삭제</button>
+                            <button class="btn-load" onclick="loadSavedDebate('${escHtml(d.id)}')">${t('viewBtn')}</button>
+                            <button class="btn-continue" onclick="resumeSavedDebate('${escHtml(d.id)}', '${escHtml(d.topic)}')">${t('continueItemBtn')}</button>
+                            <button class="btn-delete" onclick="deleteSavedDebate('${escHtml(d.id)}', this)">${t('deleteBtn')}</button>
                         </div>
                     </div>`;
                 }).join('');
             } catch (e) {
-                list.innerHTML = '<div style="padding:1rem;color:#f87171;font-size:0.85rem">불러오기 오류</div>';
+                list.innerHTML = `<div style="padding:1rem;color:#f87171;font-size:0.85rem">${t('savedError')}</div>`;
             }
         }
 
@@ -1042,10 +1254,13 @@
             return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
         }
 
+        // Initialize on load
+        renderExamples();
+
         async function loadSavedDebate(id) {
             const res = await fetch(`/debates/${encodeURIComponent(id)}`);
             const data = await res.json();
-            if (data.error) { alert('토론을 불러올 수 없습니다.'); return; }
+            if (data.error) { alert(t('loadError')); return; }
 
             // Restore UI
             document.getElementById('topicInput').value = data.topic || '';
@@ -1060,7 +1275,7 @@
             if (data.research) {
                 const card = document.createElement('div');
                 card.className = 'research-card';
-                card.innerHTML = `<div class="research-title">📊 Gemini 자료 조사 결과</div><div class="message-content">${formatMarkdown(data.research)}</div>`;
+                card.innerHTML = `<div class="research-title">${t('researchTitle')}</div><div class="message-content">${formatMarkdown(data.research)}</div>`;
                 container.appendChild(card);
             }
 
@@ -1071,12 +1286,12 @@
             if (data.conclusion) {
                 const roundHeader = document.createElement('div');
                 roundHeader.className = 'round-header';
-                roundHeader.innerHTML = '<span>📋 최종 결론</span>';
+                roundHeader.innerHTML = `<span>${t('conclusionPhase')}</span>`;
                 container.appendChild(roundHeader);
                 addConclusion(data.conclusion);
             }
 
-            document.getElementById('statusBar').textContent = `✅ 저장된 토론: ${data.topic}`;
+            document.getElementById('statusBar').textContent = t('savedDebateLoaded') + data.topic;
             currentSaveData = data;
 
             // Show action bar to allow continuing
@@ -1100,7 +1315,7 @@
             }
             for (const round of Object.keys(byRound).sort((a,b) => a-b)) {
                 const r = parseInt(round);
-                const phaseLabel = r === 1 ? '개회 분석' : `${r}라운드 반론`;
+                const phaseLabel = r === 1 ? t('openingPhase') : t('rebuttalPhase').replace('{n}', r);
                 const roundHeader = document.createElement('div');
                 roundHeader.className = 'round-header';
                 roundHeader.innerHTML = `<span>${phaseLabel}</span>`;
@@ -1124,12 +1339,12 @@
         }
 
         async function deleteSavedDebate(id, btn) {
-            if (!confirm('이 토론 기록을 삭제하시겠습니까?')) return;
+            if (!confirm(t('deleteConfirm'))) return;
             try {
                 await fetch(`/debates/${encodeURIComponent(id)}`, { method: 'DELETE' });
                 btn.closest('.saved-item').remove();
             } catch (e) {
-                alert('삭제 중 오류가 발생했습니다.');
+                alert(t('deleteError'));
             }
         }
 
@@ -1145,7 +1360,7 @@
             const bar = document.getElementById('actionBar');
             bar.style.display = 'flex';
             const saveBtn = bar.querySelector('.save-btn');
-            saveBtn.textContent = '💾 저장 중...';
+            saveBtn.textContent = t('savingText');
             saveBtn.disabled = true;
             saveBtn.style.display = 'inline-block';
             bar.querySelector('.continue-btn').style.display = 'inline-block';
@@ -1158,15 +1373,15 @@
                 });
                 const data = await res.json();
                 if (data.success) {
-                    saveBtn.textContent = '✅ 자동 저장됨';
+                    saveBtn.textContent = t('savedText');
                     pendingResumeId = data.id;
                     if (savedPanelOpen) await loadSavedList();
                 } else {
-                    saveBtn.textContent = '❌ 저장 실패';
+                    saveBtn.textContent = t('saveFailText');
                     saveBtn.disabled = false;
                 }
             } catch (e) {
-                saveBtn.textContent = '❌ 저장 실패';
+                saveBtn.textContent = t('saveFailText');
                 saveBtn.disabled = false;
             }
         }
@@ -1212,6 +1427,7 @@
                 claude_model,
                 gemini_model,
                 resume_from: pendingResumeId,
+                lang: currentLang,
             });
         }
 
@@ -1249,26 +1465,26 @@
             }
         }
 
-        function showThinking(agent, round, modelName) {
+        function showThinking(agent, round, modelName, action) {
             const container = document.getElementById('debateContainer');
             const statusBar = document.getElementById('statusBar');
             stopThinkingTimer();
 
-            const isResearch = (round === 0 && agent === 'gemini');
+            const isResearch = action === 'research' || (round === 0 && agent === 'gemini' && action !== 'context_restore' && action !== 'conclusion');
 
             // Research phase - special handling
             if (isResearch) {
                 const roundHeader = document.createElement('div');
                 roundHeader.className = 'round-header';
-                roundHeader.innerHTML = `<span>🔍 자료 조사</span>`;
+                roundHeader.innerHTML = `<span>${t('researchPhase')}</span>`;
                 container.appendChild(roundHeader);
             }
             // Ensure round header + row exist for debate rounds
-            else if (agent !== 'conclusion' && round !== currentRound) {
+            else if (agent !== 'conclusion' && action !== 'context_restore' && round !== currentRound) {
                 currentRound = round;
                 const roundHeader = document.createElement('div');
                 roundHeader.className = 'round-header';
-                const phaseLabel = round === 1 ? '개회 분석' : `${round}라운드 반론`;
+                const phaseLabel = round === 1 ? t('openingPhase') : t('rebuttalPhase').replace('{n}', round);
                 roundHeader.innerHTML = `<span>${phaseLabel}</span>`;
                 container.appendChild(roundHeader);
                 currentRow = document.createElement('div');
@@ -1280,12 +1496,19 @@
             if (agent === 'conclusion') {
                 const roundHeader = document.createElement('div');
                 roundHeader.className = 'round-header';
-                roundHeader.innerHTML = `<span>📋 최종 결론</span>`;
+                roundHeader.innerHTML = `<span>${t('conclusionPhase')}</span>`;
                 container.appendChild(roundHeader);
             }
 
             const emoji = isResearch ? '🔍' : agent === 'claude' ? '🔵' : agent === 'gemini' ? '🔴' : '📋';
-            const actionLabel = isResearch ? '자료 조사 중' : agent === 'conclusion' ? '결론 도출 중' : round === 1 ? '분석 중' : '반론 작성 중';
+            const actionLabels = {
+                research: t('thinking_research'),
+                context_restore: t('thinking_context'),
+                analysis: t('thinking_analysis'),
+                rebuttal: t('thinking_rebuttal'),
+                conclusion: t('thinking_conclusion'),
+            };
+            const actionLabel = actionLabels[action] || (isResearch ? t('thinking_research') : t('thinking_analysis'));
             const cardClass = isResearch ? 'research' : agent;
 
             const card = document.createElement('div');
@@ -1294,7 +1517,7 @@
             card.innerHTML = `
                 <div class="thinking-inner">
                     <div class="thinking-dots"><span></span><span></span><span></span></div>
-                    <div class="thinking-label">${emoji} <span class="model-name">${modelName}</span> ${actionLabel}...</div>
+                    <div class="thinking-label">${emoji} <span class="model-name">${escHtml(modelName)}</span> — ${actionLabel}...</div>
                     <div class="thinking-timer" id="thinkingElapsed">0.0s</div>
                 </div>
             `;
@@ -1352,7 +1575,7 @@
             const card = document.createElement('div');
             card.className = 'conclusion-card';
             card.innerHTML = `
-                <div class="label">종합 결론</div>
+                <div class="label">${t('conclusionLabel')}</div>
                 <div class="message-content">${formatMarkdown(content)}</div>
             `;
             container.appendChild(card);
@@ -1376,7 +1599,7 @@
             } else {
                 startBtn.style.display = 'inline-block';
                 startBtn.disabled = false;
-                startBtn.textContent = '토론 시작';
+                startBtn.textContent = t('startBtn');
                 stopBtn.style.display = 'none';
             }
         }
@@ -1401,7 +1624,7 @@
             pendingResumeId = null;
             document.getElementById('examples').style.display = 'none';
 
-            await runDebate({ topic, rounds, claude_model, gemini_model, role_mode, anti_anchor, role_swap, fast_conclusion });
+            await runDebate({ topic, rounds, claude_model, gemini_model, role_mode, anti_anchor, role_swap, fast_conclusion, lang: currentLang });
         }
 
         async function runDebate(params) {
@@ -1416,13 +1639,13 @@
                 response = await fetch('/debate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(params),
+                    body: JSON.stringify({ ...params, lang: params.lang || currentLang }),
                     signal: abortController.signal,
                 });
             } catch (e) {
                 if (e.name === 'AbortError') {
                     removeThinking();
-                    statusBar.textContent = '⏹ 토론이 중지되었습니다';
+                    statusBar.textContent = t('debateStopped');
                     setDebateUI(false);
                     return;
                 }
@@ -1456,7 +1679,7 @@
                                     const data = JSON.parse(eventData);
 
                                     if (eventType === 'thinking') {
-                                        showThinking(data.agent, data.round, data.model);
+                                        showThinking(data.agent, data.round, data.model, data.action);
 
                                     } else if (eventType === 'loaded') {
                                         // Resume: restore saved debate UI first
@@ -1467,14 +1690,14 @@
                                         if (data.research) {
                                             const c = document.createElement('div');
                                             c.className = 'research-card';
-                                            c.innerHTML = `<div class="research-title">📊 Gemini 자료 조사 결과</div><div class="message-content">${formatMarkdown(data.research)}</div>`;
+                                            c.innerHTML = `<div class="research-title">${t('researchTitle')}</div><div class="message-content">${formatMarkdown(data.research)}</div>`;
                                             container.appendChild(c);
                                         }
                                         renderRestoredMessages(data.messages || []);
                                         if (data.conclusion) {
                                             const rh = document.createElement('div');
                                             rh.className = 'round-header';
-                                            rh.innerHTML = '<span>📋 최종 결론</span>';
+                                            rh.innerHTML = `<span>${t('conclusionPhase')}</span>`;
                                             container.appendChild(rh);
                                             addConclusion(data.conclusion);
                                         }
@@ -1482,8 +1705,8 @@
                                         const sep = document.createElement('div');
                                         sep.className = 'round-header';
                                         const sepLabel = data.new_topic
-                                            ? `▶ 심화 토론: ${data.new_topic} (${data.last_round + 1}라운드~)`
-                                            : `▶ 추가 토론 (${data.last_round + 1}라운드~)`;
+                                            ? t('deeperPhase').replace('{topic}', data.new_topic) + ` (${data.last_round + 1}~)`
+                                            : t('continuationPhase') + ` (${data.last_round + 1}~)`;
                                         sep.innerHTML = `<span>${sepLabel}</span>`;
                                         container.appendChild(sep);
 
@@ -1495,11 +1718,11 @@
                                         removeThinking();
                                         const headers = container.querySelectorAll('.round-header');
                                         for (const h of headers) {
-                                            if (h.textContent.includes('자료 조사')) h.remove();
+                                            if (h.querySelector('span') && h.querySelector('span').textContent === t('researchPhase')) h.remove();
                                         }
                                         const card = document.createElement('div');
                                         card.className = 'research-card';
-                                        card.innerHTML = `<div class="research-title">📊 Gemini 자료 조사 결과</div><div class="message-content">${formatMarkdown(data.content)}</div>`;
+                                        card.innerHTML = `<div class="research-title">${t('researchTitle')}</div><div class="message-content">${formatMarkdown(data.content)}</div>`;
                                         container.appendChild(card);
                                         card.scrollIntoView({ behavior: 'smooth', block: 'end' });
 
@@ -1513,12 +1736,12 @@
                                         removeThinking();
                                         const card = document.createElement('div');
                                         card.className = 'error-card';
-                                        card.innerHTML = `<div class="error-title">토론 중단</div><div>${data.message}</div>`;
+                                        card.innerHTML = `<div class="error-title">${t('errorTitle')}</div><div>${escHtml(data.message)}</div>`;
                                         container.appendChild(card);
                                         card.scrollIntoView({ behavior: 'smooth', block: 'end' });
 
                                     } else if (eventType === 'done') {
-                                        statusBar.textContent = '✅ 토론 완료';
+                                        statusBar.textContent = t('debateDone');
                                         if (data.save_data) {
                                             currentSaveData = data.save_data;
                                             // Auto-save
@@ -1537,7 +1760,7 @@
             } catch (e) {
                 if (e.name === 'AbortError') {
                     removeThinking();
-                    statusBar.textContent = '⏹ 토론이 중지되었습니다';
+                    statusBar.textContent = t('debateStopped');
                 } else {
                     throw e;
                 }

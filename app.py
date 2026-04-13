@@ -31,7 +31,19 @@ GEMINI_MODELS = {
     "gemini-web": "Gemini (웹 - 자동 모델)",
 }
 
-GEMINI_RESEARCH_PROMPT = """다음 주제에 대해 최신 데이터와 자료를 조사해주세요.
+GEMINI_RESEARCH_PROMPT = {
+    "en": """Research the following topic with the latest data and information.
+
+Topic: {topic}
+
+Please include:
+- Latest statistics, figures, and data
+- Related news and expert opinions
+- Key facts and supporting evidence
+- Analysis from multiple perspectives
+
+Present the findings objectively. Respond in English.""",
+    "ko": """다음 주제에 대해 최신 데이터와 자료를 조사해주세요.
 
 주제: {topic}
 
@@ -41,52 +53,181 @@ GEMINI_RESEARCH_PROMPT = """다음 주제에 대해 최신 데이터와 자료�
 - 핵심 팩트와 근거 자료
 - 다양한 관점에서의 분석 자료
 
-조사 결과만 객관적으로 정리해주세요. 한국어로 응답하세요."""
+조사 결과만 객관적으로 정리해주세요. 한국어로 응답하세요.""",
+    "es": """Investiga el siguiente tema con los datos e información más recientes.
 
-CLAUDE_SYSTEM_TEMPLATE = """Debate: Claude vs Gemini | 주제: {topic}
+Tema: {topic}
 
-[참고 자료]
+Por favor incluye:
+- Estadísticas, cifras y datos recientes
+- Noticias relacionadas y opiniones de expertos
+- Hechos clave y evidencia de respaldo
+- Análisis desde múltiples perspectivas
+
+Presenta los hallazgos objetivamente. Responde en español.""",
+}
+
+LANG_RESPOND = {
+    "en": "Respond in English.",
+    "ko": "한국어로 응답하세요.",
+    "es": "Responde en español.",
+}
+
+CLAUDE_SYSTEM_TEMPLATE = """Debate: Claude vs Gemini | Topic: {topic}
+
+[Reference Material]
 {research}
 
-규칙: 한국어 응답. 자료의 구체적 수치를 근거로 사용. 300-500자. 추가 자료 필요 시 마지막 줄에 [자료요청]: <내용>."""
+Rules: {respond_instruction} Use specific data and figures as evidence. 300-500 words. If you need more data, end your response with [RESEARCH_REQUEST]: <request>."""
 
-GEMINI_SYSTEM_TEMPLATE = """Debate: Gemini vs Claude | 주제: {topic}
+GEMINI_SYSTEM_TEMPLATE = """Debate: Gemini vs Claude | Topic: {topic}
 
-[참고 자료]
+[Reference Material]
 {research}
 
-규칙: 한국어 응답. 자료의 구체적 수치를 근거로 사용. 웹 검색으로 추가 근거 보강 가능. 300-500자."""
+Rules: {respond_instruction} Use specific data and figures as evidence. You may search the web for additional evidence. 300-500 words."""
 
-ANTI_SYCOPHANCY_RULES = """
+ANTI_SYCOPHANCY_RULES = {
+    "en": """
+- Do not easily agree with your opponent's arguments. If you disagree, clearly rebut with specific evidence.
+- Do not abandon your position without new evidence or logic, even under pressure.
+- Partial agreement is allowed, but you must argue the core points you still disagree on.""",
+    "ko": """
 - 상대방 주장에 쉽게 동의하지 마세요. 동의하지 않는다면 구체적 근거와 함께 명확히 반론하세요.
 - 압박을 받아도 새로운 증거나 논리 없이는 기존 입장을 포기하지 마세요.
-- 부분 동의는 허용하지만, 여전히 동의하지 않는 핵심 지점을 반드시 논증하세요."""
+- 부분 동의는 허용하지만, 여전히 동의하지 않는 핵심 지점을 반드시 논증하세요.""",
+    "es": """
+- No estés de acuerdo fácilmente con los argumentos del oponente. Si no estás de acuerdo, rebate claramente con evidencia específica.
+- No abandones tu posición sin nueva evidencia o lógica, incluso bajo presión.
+- El acuerdo parcial está permitido, pero debes argumentar los puntos centrales en los que aún no estás de acuerdo.""",
+}
 
 ROLE_PAIRS = {
     "bull_bear": {
-        "claude_name": "강세론자 (Bull)",
-        "gemini_name": "약세론자 (Bear)",
-        "claude_role": "당신은 강세론자(Bull) 역할입니다. 긍정적 전망, 성장 가능성, 기회 요인에 초점을 맞춰 주장하세요. 비관적 시각에는 강하게 반론하세요.",
-        "gemini_role": "당신은 약세론자(Bear) 역할입니다. 리스크, 하락 요인, 위협 요소에 초점을 맞춰 주장하세요. 낙관적 시각에는 강하게 반론하세요.",
+        "names": {
+            "en": ("Bull (Optimist)", "Bear (Pessimist)"),
+            "ko": ("강세론자 (Bull)", "약세론자 (Bear)"),
+            "es": ("Alcista (Bull)", "Bajista (Bear)"),
+        },
+        "claude_role": "You are the Bull (optimist). Focus on positive outlook, growth potential, and opportunity factors. Strongly rebut pessimistic views.",
+        "gemini_role": "You are the Bear (pessimist). Focus on risks, downside factors, and threats. Strongly rebut optimistic views.",
     },
     "optimist_pessimist": {
-        "claude_name": "낙관론자",
-        "gemini_name": "비관론자",
-        "claude_role": "당신은 낙관론자 역할입니다. 긍정적 측면, 기회, 발전 가능성을 중심으로 주장하세요.",
-        "gemini_role": "당신은 비관론자 역할입니다. 문제점, 위험, 부정적 측면을 중심으로 주장하세요.",
+        "names": {
+            "en": ("Optimist", "Pessimist"),
+            "ko": ("낙관론자", "비관론자"),
+            "es": ("Optimista", "Pesimista"),
+        },
+        "claude_role": "You are the Optimist. Focus on positive aspects, opportunities, and potential for development.",
+        "gemini_role": "You are the Pessimist. Focus on problems, risks, and negative aspects.",
     },
     "pro_con": {
-        "claude_name": "찬성측",
-        "gemini_name": "반대측",
-        "claude_role": "당신은 찬성측 역할입니다. 이 주제를 강력히 지지하는 논거를 제시하세요.",
-        "gemini_role": "당신은 반대측 역할입니다. 이 주제에 강력히 반대하는 논거를 제시하세요.",
+        "names": {
+            "en": ("Pro", "Con"),
+            "ko": ("찬성측", "반대측"),
+            "es": ("A favor", "En contra"),
+        },
+        "claude_role": "You are on the Pro side. Present strong arguments in support of the topic.",
+        "gemini_role": "You are on the Con side. Present strong arguments against the topic.",
     },
     "tradition_innovation": {
-        "claude_name": "전통적 관점",
-        "gemini_name": "혁신적 관점",
-        "claude_role": "당신은 전통적·보수적 관점의 역할입니다. 검증된 방식, 안정성, 기존 질서의 가치를 강조하세요.",
-        "gemini_role": "당신은 혁신적·진보적 관점의 역할입니다. 변화, 혁신, 새로운 패러다임의 필요성을 강조하세요.",
+        "names": {
+            "en": ("Traditional View", "Innovative View"),
+            "ko": ("전통적 관점", "혁신적 관점"),
+            "es": ("Visión Tradicional", "Visión Innovadora"),
+        },
+        "claude_role": "You represent the traditional/conservative perspective. Emphasize proven methods, stability, and the value of existing order.",
+        "gemini_role": "You represent the innovative/progressive perspective. Emphasize change, innovation, and the need for new paradigms.",
     },
+}
+
+DEBATE_STRINGS = {
+    "en": {
+        "opening": "Topic: {topic}\n\nPlease present your analysis and position on this topic. Include current situation analysis, key factors, and outlook.",
+        "rebuttal_suffix": "\n\nRebut and add new perspectives.",
+        "gemini_rebuttal": "Here is your opponent (Claude)'s argument:\n\n{response}\n\nPlease rebut, supplement points you agree with, and add new perspectives.",
+        "gemini_opening_response": "Here is your opponent (Claude)'s opening statement:\n\n{response}\n\nPlease present your position and rebut.",
+        "deeper_prefix": "[Deeper topic: {topic}]\n\n",
+        "context_restore": """Continuing from a previous debate.
+
+Previous topic: {saved_topic}
+
+Previous research:
+{research}
+
+Debate so far:
+{transcript}{topic_notice}
+
+We will continue for {rounds} more rounds. When ready, reply "Understood, let's continue.".""",
+        "context_topic_notice": "\n\nWe will now continue with a deeper topic: {new_topic}",
+        "extra_research_label": "\n\n[Additional Research]\n",
+        "gemini_research_extra": "Please research additional information on the following:\n\n{request}\n\nRefer to the existing research, but focus on new data. Respond in English.",
+        "thinking_research": "Gemini Research",
+        "thinking_context": "Gemini Context Restore",
+        "status_restored": "Previous debate restored.",
+        "status_new_topic": " New topic: {topic}.",
+        "status_continue_from": " Continuing from round {n}.",
+    },
+    "ko": {
+        "opening": "주제: {topic}\n\n이 주제에 대해 당신의 분석과 입장을 제시해주세요. 현재 상황 분석, 주요 요인, 전망을 포함해주세요.",
+        "rebuttal_suffix": "\n\n반론하고 새 관점을 추가하세요.",
+        "gemini_rebuttal": "상대방(Claude)의 주장입니다:\n\n{response}\n\n이에 대해 반론하거나, 동의하는 부분은 보충하고, 새로운 관점을 추가해주세요.",
+        "gemini_opening_response": "상대방(Claude)의 개회 발언입니다:\n\n{response}\n\n이에 대해 당신의 입장을 제시하고 반론하세요.",
+        "deeper_prefix": "[심화 주제: {topic}]\n\n",
+        "context_restore": """이전 토론을 이어서 진행합니다.
+
+기존 주제: {saved_topic}
+
+이전 자료 조사 결과:
+{research}
+
+지금까지의 토론 내용:
+{transcript}{topic_notice}
+
+이제 {rounds}라운드 더 이어서 진행합니다. 준비되면 "네, 확인했습니다. 계속 진행하겠습니다."라고 답해주세요.""",
+        "context_topic_notice": "\n\n이번에는 심화 주제로 토론을 이어갑니다: {new_topic}",
+        "extra_research_label": "\n\n[추가 조사 자료]\n",
+        "gemini_research_extra": "다음 주제에 대해 추가 자료를 조사해주세요:\n\n{request}\n\n기존 조사 내용을 참고하되, 새로운 데이터와 자료를 중심으로 조사해주세요. 한국어로 응답하세요.",
+        "thinking_research": "Gemini 리서치",
+        "thinking_context": "Gemini 컨텍스트 복원",
+        "status_restored": "이전 토론 복원 완료.",
+        "status_new_topic": " 새 주제: {topic}.",
+        "status_continue_from": " {n}라운드부터 계속합니다.",
+    },
+    "es": {
+        "opening": "Tema: {topic}\n\nPor favor presenta tu análisis y posición sobre este tema. Incluye análisis de la situación actual, factores clave y perspectivas.",
+        "rebuttal_suffix": "\n\nRebate y agrega nuevas perspectivas.",
+        "gemini_rebuttal": "Aquí está el argumento de tu oponente (Claude):\n\n{response}\n\nPor favor rebate, complementa los puntos con los que estás de acuerdo, y agrega nuevas perspectivas.",
+        "gemini_opening_response": "Aquí está el discurso de apertura de tu oponente (Claude):\n\n{response}\n\nPor favor presenta tu posición y rebate.",
+        "deeper_prefix": "[Tema más profundo: {topic}]\n\n",
+        "context_restore": """Continuando con un debate anterior.
+
+Tema anterior: {saved_topic}
+
+Investigación anterior:
+{research}
+
+Debate hasta ahora:
+{transcript}{topic_notice}
+
+Continuaremos por {rounds} rondas más. Cuando estés listo, responde "Entendido, continuemos.".""",
+        "context_topic_notice": "\n\nAhora continuaremos con un tema más profundo: {new_topic}",
+        "extra_research_label": "\n\n[Investigación adicional]\n",
+        "gemini_research_extra": "Por favor investiga información adicional sobre lo siguiente:\n\n{request}\n\nConsulta la investigación existente, pero enfócate en nuevos datos. Responde en español.",
+        "thinking_research": "Investigación Gemini",
+        "thinking_context": "Restauración Gemini",
+        "status_restored": "Debate anterior restaurado.",
+        "status_new_topic": " Nuevo tema: {topic}.",
+        "status_continue_from": " Continuando desde ronda {n}.",
+    },
+}
+
+RESEARCH_REQUEST_MARKERS = ["[RESEARCH_REQUEST]:", "[자료요청]:", "[SOLICITUD_DATOS]:"]
+
+PROMPT_ROLE_LABELS = {
+    "en": ("Opponent", "Me"),
+    "ko": ("상대방", "나"),
+    "es": ("Oponente", "Yo"),
 }
 
 
@@ -94,15 +235,16 @@ RESEARCH_MAX_CHARS = 2000  # truncate research in system prompt to save tokens
 CLAUDE_FAST_MODEL = "claude-haiku-4-5-20251001"  # used for simple tasks (conclusion)
 
 
-def build_system(base_template, topic, research, role_desc=None):
+def build_system(base_template, topic, research, lang="en", role_desc=None):
     """Build system prompt with optional role + always-on anti-sycophancy.
     Research is truncated to RESEARCH_MAX_CHARS to limit token usage.
     """
-    truncated = research[:RESEARCH_MAX_CHARS] + "\n...(이하 생략)" if len(research) > RESEARCH_MAX_CHARS else research
-    system = base_template.format(topic=topic, research=truncated)
+    truncated = research[:RESEARCH_MAX_CHARS] + "\n...(truncated)" if len(research) > RESEARCH_MAX_CHARS else research
+    respond_instruction = LANG_RESPOND.get(lang, LANG_RESPOND["en"])
+    system = base_template.format(topic=topic, research=truncated, respond_instruction=respond_instruction)
     if role_desc:
-        system += f"\n\n[역할 지정]\n{role_desc}"
-    system += ANTI_SYCOPHANCY_RULES
+        system += f"\n\n[Role]\n{role_desc}"
+    system += ANTI_SYCOPHANCY_RULES.get(lang, ANTI_SYCOPHANCY_RULES["en"])
     return system
 
 
@@ -113,35 +255,38 @@ Topic: {topic}
 Full debate transcript:
 {transcript}
 
-Please provide a comprehensive conclusion in Korean that:
+Please provide a comprehensive conclusion that:
 1. Summarizes the key points of agreement
 2. Summarizes the key points of disagreement
 3. Synthesizes the strongest arguments from both sides
 4. Provides a balanced final assessment
 
-Format with clear headers and be thorough but concise."""
+Format with clear headers and be thorough but concise. {respond_instruction}"""
 
 
-async def _handle_data_request(claude_response, existing_research):
-    """Parse Claude's response for [자료요청]: lines and fetch additional data via Gemini."""
+async def _handle_data_request(claude_response, existing_research, lang="en"):
+    """Parse Claude's response for research request markers and fetch additional data via Gemini."""
     lines = claude_response.split("\n")
     request_line = None
     for i, line in enumerate(lines):
-        if line.strip().startswith("[자료요청]:"):
-            request_line = line.strip()[len("[자료요청]:"):].strip()
-            # Remove the request line from response
-            clean_lines = lines[:i]
-            # Keep any lines after the request that aren't empty
-            remaining = [l for l in lines[i+1:] if l.strip()]
-            clean_lines.extend(remaining)
-            claude_response = "\n".join(clean_lines).strip()
+        stripped = line.strip()
+        for marker in RESEARCH_REQUEST_MARKERS:
+            if stripped.startswith(marker):
+                request_line = stripped[len(marker):].strip()
+                clean_lines = lines[:i]
+                remaining = [l for l in lines[i+1:] if l.strip()]
+                clean_lines.extend(remaining)
+                claude_response = "\n".join(clean_lines).strip()
+                break
+        if request_line is not None:
             break
 
     if not request_line:
         return claude_response, ""
 
     try:
-        extra_prompt = f"다음 주제에 대해 추가 자료를 조사해주세요:\n\n{request_line}\n\n기존 조사 내용을 참고하되, 새로운 데이터와 자료를 중심으로 조사해주세요. 한국어로 응답하세요."
+        strings = DEBATE_STRINGS.get(lang, DEBATE_STRINGS["en"])
+        extra_prompt = strings["gemini_research_extra"].format(request=request_line)
         extra_research = await call_gemini_web(extra_prompt)
         return claude_response, extra_research
     except Exception:
@@ -392,10 +537,11 @@ def trim_history(history):
     return first + rest
 
 
-def build_prompt(system, messages):
+def build_prompt(system, messages, lang="en"):
+    labels = PROMPT_ROLE_LABELS.get(lang, PROMPT_ROLE_LABELS["en"])
     parts = [system]
     for msg in trim_history(messages):
-        role = "상대방" if msg["role"] == "user" else "나"
+        role = labels[0] if msg["role"] == "user" else labels[1]
         parts.append(f"[{role}]\n{msg['content']}")
     return "\n\n".join(parts)
 
@@ -477,6 +623,9 @@ async def debate(request: Request):
     anti_anchor = body.get("anti_anchor", False)
     role_swap = body.get("role_swap", False)
     fast_conclusion = body.get("fast_conclusion", True)  # use Haiku for conclusion
+    lang = body.get("lang", "en")
+    if lang not in ("en", "ko", "es"):
+        lang = "en"
 
     if claude_model not in CLAUDE_MODELS:
         claude_model = "claude-opus-4-6"
@@ -485,10 +634,12 @@ async def debate(request: Request):
         claude_name = CLAUDE_MODELS.get(claude_model, claude_model)
         # Use fast model for conclusion if enabled and user isn't already on haiku
         conclusion_model = CLAUDE_FAST_MODEL if fast_conclusion and claude_model != CLAUDE_FAST_MODEL else claude_model
-        gemini_name = "Gemini Pro (웹)"
+        gemini_name = "Gemini (Web)"
         extra_research = ""
         conclusion = ""
         messages = []  # [{agent, round, content}]
+        strings = DEBATE_STRINGS.get(lang, DEBATE_STRINGS["en"])
+        respond_instruction = LANG_RESPOND.get(lang, LANG_RESPOND["en"])
 
         # ============================================
         # Resume mode: restore saved debate context
@@ -496,13 +647,13 @@ async def debate(request: Request):
         if resume_from:
             filepath = DEBATES_DIR / resume_from
             if not filepath.exists():
-                yield sse_event("error", {"message": "⚠️ 저장된 토론을 찾을 수 없습니다."})
+                yield sse_event("error", {"message": "⚠️ Saved debate not found."})
                 yield sse_event("done", {})
                 return
 
             saved = json.loads(filepath.read_text())
             saved_topic = saved.get("topic", topic)
-            active_topic = new_topic if new_topic else saved_topic  # topic for new rounds
+            active_topic = new_topic if new_topic else saved_topic
             research_data = saved.get("research", "")
             claude_history = saved.get("claude_history", [])
             transcript = saved.get("transcript", "")
@@ -510,10 +661,8 @@ async def debate(request: Request):
             last_round = saved.get("last_round", 0)
             messages = list(saved_messages)
 
-            # Claude system uses active_topic so it knows the new focus
-            claude_system = CLAUDE_SYSTEM_TEMPLATE.format(topic=active_topic, research=research_data)
+            claude_system = build_system(CLAUDE_SYSTEM_TEMPLATE, active_topic, research_data, lang=lang)
 
-            # Emit loaded event so frontend can restore UI
             yield sse_event("loaded", {
                 "topic": saved_topic,
                 "new_topic": active_topic if new_topic else None,
@@ -524,106 +673,93 @@ async def debate(request: Request):
             })
             await asyncio.sleep(0)
 
-            # Restore Gemini context in a fresh chat
-            yield sse_event("thinking", {"agent": "gemini", "round": 0, "model": "Gemini 컨텍스트 복원"})
+            yield sse_event("thinking", {"agent": "gemini", "round": 0, "model": strings["thinking_context"], "action": "context_restore"})
             await asyncio.sleep(0)
 
-            topic_notice = ""
-            if new_topic:
-                topic_notice = f"\n\n이번에는 심화 주제로 토론을 이어갑니다: {new_topic}"
-
-            context_prompt = f"""이전 토론을 이어서 진행합니다.
-
-기존 주제: {saved_topic}
-
-이전 자료 조사 결과:
-{research_data}
-
-지금까지의 토론 내용:
-{transcript}{topic_notice}
-
-이제 {rounds}라운드 더 이어서 진행합니다. 준비되면 "네, 확인했습니다. 계속 진행하겠습니다."라고 답해주세요."""
+            topic_notice = strings["context_topic_notice"].format(new_topic=new_topic) if new_topic else ""
+            context_prompt = strings["context_restore"].format(
+                saved_topic=saved_topic,
+                research=research_data,
+                transcript=transcript,
+                topic_notice=topic_notice,
+                rounds=rounds,
+            )
 
             try:
                 await call_gemini_web(context_prompt, new_chat=True)
             except Exception as e:
-                yield sse_event("error", {"message": f"⚠️ Gemini 컨텍스트 복원 오류: {e}"})
+                yield sse_event("error", {"message": f"⚠️ Gemini context restore error: {e}"})
                 yield sse_event("done", {})
                 return
 
-            status_msg = f"이전 토론 복원 완료."
+            status_msg = strings["status_restored"]
             if new_topic:
-                status_msg += f" 새 주제: {new_topic}"
-            status_msg += f" {last_round + 1}라운드부터 계속합니다."
+                status_msg += strings["status_new_topic"].format(topic=new_topic)
+            status_msg += strings["status_continue_from"].format(n=last_round + 1)
             yield sse_event("status", {"message": status_msg})
 
-            # Get last Gemini response to use as starting point
             gemini_response = ""
             for msg in reversed(saved_messages):
                 if msg["agent"] == "gemini":
                     gemini_response = msg["content"]
                     break
 
-            # Run additional rounds
             for round_num in range(last_round + 1, last_round + rounds + 1):
-                # Claude
-                yield sse_event("thinking", {"agent": "claude", "round": round_num, "model": claude_name})
+                yield sse_event("thinking", {"agent": "claude", "round": round_num, "model": claude_name, "action": "rebuttal"})
                 await asyncio.sleep(0)
 
                 extra_context = ""
                 if extra_research:
-                    extra_context = f"\n\n[추가 조사 자료]\n{extra_research}"
+                    extra_context = strings["extra_research_label"] + extra_research
                     extra_research = ""
 
-                topic_prefix = f"[심화 주제: {active_topic}]\n\n" if new_topic else ""
+                topic_prefix = strings["deeper_prefix"].format(topic=active_topic) if new_topic else ""
                 claude_history.append({"role": "user", "content": f"{topic_prefix}[Gemini]\n{gemini_response}{extra_context}"})
-                resume_prompt = build_prompt(claude_system, claude_history) + "\n\n반론하고 새 관점을 추가하세요."
+                resume_prompt = build_prompt(claude_system, claude_history, lang) + strings["rebuttal_suffix"]
 
                 try:
                     claude_response = await call_claude(resume_prompt, claude_model)
                 except RateLimitError as e:
-                    reset = f" (리셋: {e.reset_info})" if e.reset_info else ""
-                    yield sse_event("error", {"message": f"⚠️ Claude 토큰 한도 초과{reset}"})
+                    reset = f" (reset: {e.reset_info})" if e.reset_info else ""
+                    yield sse_event("error", {"message": f"⚠️ Claude rate limit exceeded{reset}"})
                     yield sse_event("done", {})
                     return
                 except Exception as e:
-                    yield sse_event("error", {"message": f"⚠️ Claude 오류: {e}"})
+                    yield sse_event("error", {"message": f"⚠️ Claude error: {e}"})
                     yield sse_event("done", {})
                     return
 
-                claude_response, extra_research = await _handle_data_request(claude_response, research_data)
+                claude_response, extra_research = await _handle_data_request(claude_response, research_data, lang)
                 claude_history.append({"role": "assistant", "content": claude_response})
-                transcript += f"## Claude ({round_num}라운드)\n{claude_response}\n\n"
+                transcript += f"## Claude (Round {round_num})\n{claude_response}\n\n"
                 messages.append({"agent": "claude", "round": round_num, "content": claude_response})
                 yield sse_event("message", {"agent": "claude", "round": round_num, "phase": "rebuttal", "content": claude_response})
 
-                # Gemini
-                yield sse_event("thinking", {"agent": "gemini", "round": round_num, "model": gemini_name})
+                yield sse_event("thinking", {"agent": "gemini", "round": round_num, "model": gemini_name, "action": "rebuttal"})
                 await asyncio.sleep(0)
 
-                topic_prefix_g = f"[심화 주제: {active_topic}]\n\n" if new_topic else ""
-                gemini_rebuttal = f"{topic_prefix_g}상대방(Claude)의 주장입니다:\n\n{claude_response}\n\n이에 대해 반론하거나, 동의하는 부분은 보충하고, 새로운 관점을 추가해주세요."
+                topic_prefix_g = strings["deeper_prefix"].format(topic=active_topic) if new_topic else ""
+                gemini_rebuttal_text = topic_prefix_g + strings["gemini_rebuttal"].format(response=claude_response)
 
                 try:
-                    gemini_response = await call_gemini_web(gemini_rebuttal, new_chat=False)
+                    gemini_response = await call_gemini_web(gemini_rebuttal_text, new_chat=False)
                 except Exception as e:
-                    yield sse_event("error", {"message": f"⚠️ Gemini 오류: {e}"})
+                    yield sse_event("error", {"message": f"⚠️ Gemini error: {e}"})
                     yield sse_event("done", {})
                     return
 
-                transcript += f"## Gemini ({round_num}라운드)\n{gemini_response}\n\n"
+                transcript += f"## Gemini (Round {round_num})\n{gemini_response}\n\n"
                 messages.append({"agent": "gemini", "round": round_num, "content": gemini_response})
                 yield sse_event("message", {"agent": "gemini", "round": round_num, "phase": "rebuttal", "content": gemini_response})
 
-            # Conclusion
-            yield sse_event("thinking", {"agent": "conclusion", "round": 0, "model": claude_name})
+            yield sse_event("thinking", {"agent": "conclusion", "round": 0, "model": claude_name, "action": "conclusion"})
             await asyncio.sleep(0)
 
-            conclusion_prompt = CONCLUSION_PROMPT_TEMPLATE.format(topic=active_topic, transcript=transcript)
+            conclusion_prompt = CONCLUSION_PROMPT_TEMPLATE.format(topic=active_topic, transcript=transcript, respond_instruction=respond_instruction)
             try:
                 conclusion = await call_claude(conclusion_prompt, conclusion_model)
             except Exception as e:
-                yield sse_event("error", {"message": f"⚠️ Claude 결론 생성 오류: {e}"})
+                yield sse_event("error", {"message": f"⚠️ Claude conclusion error: {e}"})
                 yield sse_event("done", {})
                 return
 
@@ -653,14 +789,14 @@ async def debate(request: Request):
         research_data = ""
 
         # Phase 0: Gemini researches the topic
-        yield sse_event("thinking", {"agent": "gemini", "round": 0, "model": "Gemini 리서치"})
+        yield sse_event("thinking", {"agent": "gemini", "round": 0, "model": strings["thinking_research"], "action": "research"})
         await asyncio.sleep(0)
 
         try:
-            research_prompt = GEMINI_RESEARCH_PROMPT.format(topic=topic)
+            research_prompt = GEMINI_RESEARCH_PROMPT.get(lang, GEMINI_RESEARCH_PROMPT["en"]).format(topic=topic)
             research_data = await call_gemini_web(research_prompt)
         except Exception as e:
-            yield sse_event("error", {"message": f"⚠️ Gemini 자료조사 오류: {e}"})
+            yield sse_event("error", {"message": f"⚠️ Gemini research error: {e}"})
             yield sse_event("done", {})
             return
 
@@ -669,14 +805,15 @@ async def debate(request: Request):
         # Resolve role names and system prompts
         role = ROLE_PAIRS.get(role_mode) if role_mode else None
         if role:
+            names = role["names"].get(lang, role["names"]["en"])
             if role_swap:
-                claude_role_name = role["gemini_name"]
-                gemini_role_name = role["claude_name"]
+                claude_role_name = names[1]
+                gemini_role_name = names[0]
                 claude_role_desc = role["gemini_role"]
                 gemini_role_desc = role["claude_role"]
             else:
-                claude_role_name = role["claude_name"]
-                gemini_role_name = role["gemini_name"]
+                claude_role_name = names[0]
+                gemini_role_name = names[1]
                 claude_role_desc = role["claude_role"]
                 gemini_role_desc = role["gemini_role"]
         else:
@@ -685,34 +822,34 @@ async def debate(request: Request):
             claude_role_desc = None
             gemini_role_desc = None
 
-        claude_system = build_system(CLAUDE_SYSTEM_TEMPLATE, topic, research_data, claude_role_desc)
-        gemini_system = build_system(GEMINI_SYSTEM_TEMPLATE, topic, research_data, gemini_role_desc)
+        claude_system = build_system(CLAUDE_SYSTEM_TEMPLATE, topic, research_data, lang=lang, role_desc=claude_role_desc)
+        gemini_system = build_system(GEMINI_SYSTEM_TEMPLATE, topic, research_data, lang=lang, role_desc=gemini_role_desc)
 
-        opening_prompt = f"주제: {topic}\n\n이 주제에 대해 당신의 분석과 입장을 제시해주세요. 현재 상황 분석, 주요 요인, 전망을 포함해주세요."
+        opening_prompt = strings["opening"].format(topic=topic)
 
         # Phase 1: Opening statements
 
         # Claude Round 1
-        yield sse_event("thinking", {"agent": "claude", "round": 1, "model": claude_role_name})
+        yield sse_event("thinking", {"agent": "claude", "round": 1, "model": claude_role_name, "action": "analysis"})
         await asyncio.sleep(0)
 
         claude_history.append({"role": "user", "content": opening_prompt})
         try:
-            prompt = build_prompt(claude_system, claude_history)
+            prompt = build_prompt(claude_system, claude_history, lang)
             claude_response = await call_claude(prompt, claude_model)
         except RateLimitError as e:
-            reset = f" (리셋: {e.reset_info})" if e.reset_info else ""
-            yield sse_event("error", {"message": f"⚠️ Claude 토큰 한도 초과{reset}"})
+            reset = f" (reset: {e.reset_info})" if e.reset_info else ""
+            yield sse_event("error", {"message": f"⚠️ Claude rate limit exceeded{reset}"})
             yield sse_event("done", {})
             return
         except Exception as e:
-            yield sse_event("error", {"message": f"⚠️ Claude 오류: {e}"})
+            yield sse_event("error", {"message": f"⚠️ Claude error: {e}"})
             yield sse_event("done", {})
             return
 
-        claude_response, extra_research = await _handle_data_request(claude_response, research_data)
+        claude_response, extra_research = await _handle_data_request(claude_response, research_data, lang)
         claude_history.append({"role": "assistant", "content": claude_response})
-        transcript += f"## Claude (1라운드 - 개회)\n{claude_response}\n\n"
+        transcript += f"## Claude (Round 1 - Opening)\n{claude_response}\n\n"
         messages.append({"agent": "claude", "round": 1, "role": claude_role_name, "content": claude_response})
         yield sse_event("message", {"agent": "claude", "round": 1, "phase": "opening",
                                     "role": claude_role_name, "content": claude_response})
@@ -720,97 +857,94 @@ async def debate(request: Request):
         # Gemini Round 1
         # anti_anchor=True: independent opening (Gemini doesn't see Claude's response)
         # anti_anchor=False: sequential (Gemini responds directly to Claude's opening)
-        yield sse_event("thinking", {"agent": "gemini", "round": 1, "model": gemini_role_name})
+        yield sse_event("thinking", {"agent": "gemini", "round": 1, "model": gemini_role_name, "action": "analysis"})
         await asyncio.sleep(0)
 
         if anti_anchor:
             gemini_opening = opening_prompt
         else:
-            gemini_opening = f"상대방(Claude)의 개회 발언입니다:\n\n{claude_response}\n\n이에 대해 당신의 입장을 제시하고 반론하세요."
+            gemini_opening = strings["gemini_opening_response"].format(response=claude_response)
 
         gemini_history.append({"role": "user", "content": gemini_opening})
         try:
-            gemini_prompt = build_prompt(gemini_system, gemini_history)
+            gemini_prompt = build_prompt(gemini_system, gemini_history, lang)
             gemini_response = await call_gemini_web(gemini_prompt, new_chat=True)
         except Exception as e:
-            yield sse_event("error", {"message": f"⚠️ Gemini 오류: {e}"})
+            yield sse_event("error", {"message": f"⚠️ Gemini error: {e}"})
             yield sse_event("done", {})
             return
 
         gemini_history.append({"role": "assistant", "content": gemini_response})
-        transcript += f"## Gemini (1라운드 - 개회)\n{gemini_response}\n\n"
+        transcript += f"## Gemini (Round 1 - Opening)\n{gemini_response}\n\n"
         messages.append({"agent": "gemini", "round": 1, "role": gemini_role_name, "content": gemini_response})
         yield sse_event("message", {"agent": "gemini", "round": 1, "phase": "opening",
                                     "role": gemini_role_name, "content": gemini_response})
 
         # Phase 2: Debate rounds
         for round_num in range(2, rounds + 1):
-            # Claude responds
-            yield sse_event("thinking", {"agent": "claude", "round": round_num, "model": claude_role_name})
+            yield sse_event("thinking", {"agent": "claude", "round": round_num, "model": claude_role_name, "action": "rebuttal"})
             await asyncio.sleep(0)
 
             extra_context = ""
             if extra_research:
-                extra_context = f"\n\n[추가 조사 자료]\n{extra_research}"
+                extra_context = strings["extra_research_label"] + extra_research
                 extra_research = ""
 
-            # Store compact version in history; send full instruction only for current turn
             claude_history.append({"role": "user", "content": f"[Gemini]\n{gemini_response}{extra_context}"})
-            current_prompt = build_prompt(claude_system, claude_history) + "\n\n반론하고 새 관점을 추가하세요."
+            current_prompt = build_prompt(claude_system, claude_history, lang) + strings["rebuttal_suffix"]
 
             try:
                 claude_response = await call_claude(current_prompt, claude_model)
             except RateLimitError as e:
-                reset = f" (리셋: {e.reset_info})" if e.reset_info else ""
-                yield sse_event("error", {"message": f"⚠️ Claude 토큰 한도 초과{reset}. 현재까지의 토론 내용을 확인하세요."})
+                reset = f" (reset: {e.reset_info})" if e.reset_info else ""
+                yield sse_event("error", {"message": f"⚠️ Claude rate limit exceeded{reset}. Debate progress saved."})
                 yield sse_event("done", {})
                 return
             except Exception as e:
-                yield sse_event("error", {"message": f"⚠️ Claude 오류: {e}"})
+                yield sse_event("error", {"message": f"⚠️ Claude error: {e}"})
                 yield sse_event("done", {})
                 return
 
-            claude_response, extra_research = await _handle_data_request(claude_response, research_data)
+            claude_response, extra_research = await _handle_data_request(claude_response, research_data, lang)
             claude_history.append({"role": "assistant", "content": claude_response})
-            transcript += f"## Claude ({round_num}라운드)\n{claude_response}\n\n"
+            transcript += f"## Claude (Round {round_num})\n{claude_response}\n\n"
             messages.append({"agent": "claude", "round": round_num, "role": claude_role_name, "content": claude_response})
             yield sse_event("message", {"agent": "claude", "round": round_num, "phase": "rebuttal",
                                         "role": claude_role_name, "content": claude_response})
 
-            # Gemini responds
-            yield sse_event("thinking", {"agent": "gemini", "round": round_num, "model": gemini_role_name})
+            yield sse_event("thinking", {"agent": "gemini", "round": round_num, "model": gemini_role_name, "action": "rebuttal"})
             await asyncio.sleep(0)
 
-            gemini_rebuttal = f"상대방(Claude)의 주장입니다:\n\n{claude_response}\n\n이에 대해 반론하거나, 동의하는 부분은 보충하고, 새로운 관점을 추가해주세요."
-            gemini_history.append({"role": "user", "content": gemini_rebuttal})
+            gemini_rebuttal_text = strings["gemini_rebuttal"].format(response=claude_response)
+            gemini_history.append({"role": "user", "content": gemini_rebuttal_text})
 
             try:
-                gemini_response = await call_gemini_web(gemini_rebuttal, new_chat=False)
+                gemini_response = await call_gemini_web(gemini_rebuttal_text, new_chat=False)
             except Exception as e:
-                yield sse_event("error", {"message": f"⚠️ Gemini 오류: {e}"})
+                yield sse_event("error", {"message": f"⚠️ Gemini error: {e}"})
                 yield sse_event("done", {})
                 return
 
             gemini_history.append({"role": "assistant", "content": gemini_response})
-            transcript += f"## Gemini ({round_num}라운드)\n{gemini_response}\n\n"
+            transcript += f"## Gemini (Round {round_num})\n{gemini_response}\n\n"
             messages.append({"agent": "gemini", "round": round_num, "role": gemini_role_name, "content": gemini_response})
             yield sse_event("message", {"agent": "gemini", "round": round_num, "phase": "rebuttal",
                                         "role": gemini_role_name, "content": gemini_response})
 
         # Phase 3: Conclusion
-        yield sse_event("thinking", {"agent": "conclusion", "round": 0, "model": claude_name})
+        yield sse_event("thinking", {"agent": "conclusion", "round": 0, "model": claude_name, "action": "conclusion"})
         await asyncio.sleep(0)
 
-        conclusion_prompt = CONCLUSION_PROMPT_TEMPLATE.format(topic=topic, transcript=transcript)
+        conclusion_prompt = CONCLUSION_PROMPT_TEMPLATE.format(topic=topic, transcript=transcript, respond_instruction=respond_instruction)
         try:
             conclusion = await call_claude(conclusion_prompt, conclusion_model)
         except RateLimitError as e:
-            reset = f" (리셋: {e.reset_info})" if e.reset_info else ""
-            yield sse_event("error", {"message": f"⚠️ Claude 토큰 한도 초과{reset}. 결론 생성을 건너뜁니다."})
+            reset = f" (reset: {e.reset_info})" if e.reset_info else ""
+            yield sse_event("error", {"message": f"⚠️ Claude rate limit exceeded{reset}. Skipping conclusion."})
             yield sse_event("done", {})
             return
         except Exception as e:
-            yield sse_event("error", {"message": f"⚠️ Claude 결론 생성 오류: {e}"})
+            yield sse_event("error", {"message": f"⚠️ Claude conclusion error: {e}"})
             yield sse_event("done", {})
             return
 
