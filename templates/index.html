@@ -882,7 +882,7 @@
                 <label class="model-label gemini" data-i18n="geminiModel">🔴 Gemini Model</label>
                 <select class="model-select gemini-border" id="geminiModelSelect">
                     {% for model_id, model_name in gemini_models.items() %}
-                    <option value="{{ model_id }}" {{ 'selected' if model_id == 'gemini-web' }}>{{ model_name }}</option>
+                    <option value="{{ model_id }}" {{ 'selected' if model_id == 'gemini-3.1-pro-preview' }}>{{ model_name }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -1213,41 +1213,68 @@
             if (savedPanelOpen) {
                 list.style.display = 'block';
                 toggle.textContent = t('savedToggleOpen');
-                await loadSavedList();
+                await refreshSavedList();
             } else {
                 list.style.display = 'none';
                 toggle.textContent = t('savedToggle');
             }
         }
 
-        async function loadSavedList() {
+        const SAVED_PAGE_SIZE = 10;
+        let savedDebates = [];
+        let savedPage = 0;
+
+        async function loadSavedList(page = 0) {
             const list = document.getElementById('savedList');
-            list.innerHTML = `<div style="padding:1rem;color:#555;text-align:center;font-size:0.85rem">${t('savedLoading')}</div>`;
-            try {
-                const res = await fetch('/debates');
-                const data = await res.json();
-                if (!data.debates || data.debates.length === 0) {
-                    list.innerHTML = `<div style="padding:1rem;color:#555;text-align:center;font-size:0.85rem">${t('savedEmpty')}</div>`;
+            if (savedDebates.length === 0) {
+                list.innerHTML = `<div style="padding:1rem;color:#555;text-align:center;font-size:0.85rem">${t('savedLoading')}</div>`;
+                try {
+                    const res = await fetch('/debates');
+                    const data = await res.json();
+                    savedDebates = data.debates || [];
+                } catch (e) {
+                    list.innerHTML = `<div style="padding:1rem;color:#f87171;font-size:0.85rem">${t('savedError')}</div>`;
                     return;
                 }
-                list.innerHTML = data.debates.map(d => {
-                    const date = new Date(d.timestamp * 1000).toLocaleString(undefined, {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
-                    return `
-                    <div class="saved-item">
-                        <div class="saved-item-info">
-                            <div class="saved-item-topic">${escHtml(d.topic)}</div>
-                            <div class="saved-item-meta">${date} · ${d.last_round} ${t('roundsCompleted')}</div>
-                        </div>
-                        <div class="saved-item-actions">
-                            <button class="btn-load" onclick="loadSavedDebate('${escHtml(d.id)}')">${t('viewBtn')}</button>
-                            <button class="btn-continue" onclick="resumeSavedDebate('${escHtml(d.id)}', '${escHtml(d.topic)}')">${t('continueItemBtn')}</button>
-                            <button class="btn-delete" onclick="deleteSavedDebate('${escHtml(d.id)}', this)">${t('deleteBtn')}</button>
-                        </div>
-                    </div>`;
-                }).join('');
-            } catch (e) {
-                list.innerHTML = `<div style="padding:1rem;color:#f87171;font-size:0.85rem">${t('savedError')}</div>`;
             }
+            if (savedDebates.length === 0) {
+                list.innerHTML = `<div style="padding:1rem;color:#555;text-align:center;font-size:0.85rem">${t('savedEmpty')}</div>`;
+                return;
+            }
+            savedPage = page;
+            const totalPages = Math.ceil(savedDebates.length / SAVED_PAGE_SIZE);
+            const slice = savedDebates.slice(page * SAVED_PAGE_SIZE, (page + 1) * SAVED_PAGE_SIZE);
+            const items = slice.map(d => {
+                const date = new Date(d.timestamp * 1000).toLocaleString(undefined, {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+                return `
+                <div class="saved-item">
+                    <div class="saved-item-info">
+                        <div class="saved-item-topic">${escHtml(d.topic)}</div>
+                        <div class="saved-item-meta">${date} · ${d.last_round} ${t('roundsCompleted')}</div>
+                    </div>
+                    <div class="saved-item-actions">
+                        <button class="btn-load" onclick="loadSavedDebate('${escHtml(d.id)}')">${t('viewBtn')}</button>
+                        <button class="btn-continue" onclick="resumeSavedDebate('${escHtml(d.id)}', '${escHtml(d.topic)}')">${t('continueItemBtn')}</button>
+                        <button class="btn-delete" onclick="deleteSavedDebate('${escHtml(d.id)}', this)">${t('deleteBtn')}</button>
+                    </div>
+                </div>`;
+            }).join('');
+
+            const pagination = totalPages > 1 ? `
+                <div style="display:flex;align-items:center;justify-content:center;gap:0.5rem;padding:0.6rem 0;border-top:1px solid #222;margin-top:0.3rem">
+                    <button onclick="loadSavedList(${page - 1})" ${page === 0 ? 'disabled' : ''}
+                        style="background:none;border:1px solid #333;color:#aaa;padding:0.25rem 0.6rem;border-radius:4px;cursor:pointer;font-size:0.8rem">‹</button>
+                    <span style="color:#666;font-size:0.8rem">${page + 1} / ${totalPages}</span>
+                    <button onclick="loadSavedList(${page + 1})" ${page >= totalPages - 1 ? 'disabled' : ''}
+                        style="background:none;border:1px solid #333;color:#aaa;padding:0.25rem 0.6rem;border-radius:4px;cursor:pointer;font-size:0.8rem">›</button>
+                </div>` : '';
+
+            list.innerHTML = items + pagination;
+        }
+
+        async function refreshSavedList() {
+            savedDebates = [];
+            await loadSavedList(0);
         }
 
         function escHtml(s) {
@@ -1342,7 +1369,11 @@
             if (!confirm(t('deleteConfirm'))) return;
             try {
                 await fetch(`/debates/${encodeURIComponent(id)}`, { method: 'DELETE' });
-                btn.closest('.saved-item').remove();
+                savedDebates = savedDebates.filter(d => d.id !== id);
+                // If current page is now empty and not first page, go back one
+                const totalPages = Math.ceil(savedDebates.length / SAVED_PAGE_SIZE);
+                const page = savedPage >= totalPages ? Math.max(0, totalPages - 1) : savedPage;
+                await loadSavedList(page);
             } catch (e) {
                 alert(t('deleteError'));
             }
@@ -1375,7 +1406,7 @@
                 if (data.success) {
                     saveBtn.textContent = t('savedText');
                     pendingResumeId = data.id;
-                    if (savedPanelOpen) await loadSavedList();
+                    if (savedPanelOpen) await refreshSavedList();
                 } else {
                     saveBtn.textContent = t('saveFailText');
                     saveBtn.disabled = false;

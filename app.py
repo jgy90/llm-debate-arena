@@ -29,7 +29,11 @@ CLAUDE_MODELS = {
 }
 
 GEMINI_MODELS = {
-    "gemini-web": "Gemini (웹 - 자동 모델)",
+    "gemini-3.1-pro-preview": "Gemini 3.1 Pro Preview (CLI)",
+    "gemini-3-flash-preview": "Gemini 3 Flash Preview (CLI)",
+    "gemini-2.5-pro": "Gemini 2.5 Pro (CLI)",
+    "gemini-2.0-flash": "Gemini 2.0 Flash (CLI)",
+    "gemini-web": "Gemini (웹 브라우저)",
 }
 
 GEMINI_RESEARCH_PROMPT = {
@@ -203,6 +207,11 @@ GEMINI_SYSTEM_TEMPLATE = """Debate: Gemini vs Claude | Topic: {topic}
 
 Rules: {respond_instruction} Cite specific numbers and statistics from the research material. Challenge your opponent's claims with counter-evidence. You may search the web for additional data. 300-500 words."""
 
+# Lightweight system for rebuttal rounds — no research data (already in history), saves tokens
+GEMINI_REBUTTAL_SYSTEM_TEMPLATE = """Debate: Gemini vs Claude | Topic: {topic}
+Role: {role_desc}
+Rules: {respond_instruction} Challenge opponent's claims with specific data. You may search the web. 300-500 words."""
+
 ANTI_SYCOPHANCY_RULES = {
     "en": """
 - Every claim must be backed by a specific number, statistic, or fact from the research material.
@@ -352,6 +361,17 @@ PROMPT_ROLE_LABELS = {
 
 RESEARCH_MAX_CHARS = 2000  # truncate research in system prompt to save tokens
 CLAUDE_FAST_MODEL = "claude-haiku-4-5-20251001"  # used for simple tasks (conclusion)
+
+
+def build_rebuttal_system(topic, lang="en", role_desc=""):
+    """Lightweight system prompt for Gemini CLI rebuttal rounds — no research, saves tokens."""
+    respond_instruction = LANG_RESPOND.get(lang, LANG_RESPOND["en"])
+    system = GEMINI_REBUTTAL_SYSTEM_TEMPLATE.format(
+        topic=topic, role_desc=role_desc or "Debate participant",
+        respond_instruction=respond_instruction,
+    )
+    system += ANTI_SYCOPHANCY_RULES.get(lang, ANTI_SYCOPHANCY_RULES["en"])
+    return system
 
 
 def build_system(base_template, topic, research, lang="en", role_desc=None):
@@ -533,7 +553,7 @@ async def research_topic(topic: str, lang: str = "en", model: str = "claude-opus
     return await call_claude(prompt, model)
 
 
-async def _handle_data_request(claude_response, existing_research, lang="en", model="claude-opus-4-6"):
+async def _handle_data_request(claude_response, existing_research, lang="en", model="claude-opus-4-6", gemini_model="gemini-2.5-pro"):
     """Parse Claude's response for research request markers and fetch additional data via Gemini."""
     lines = claude_response.split("\n")
     request_line = None
@@ -555,7 +575,7 @@ async def _handle_data_request(claude_response, existing_research, lang="en", mo
 
     try:
         extra_prompt = GEMINI_RESEARCH_PROMPT.get(lang, GEMINI_RESEARCH_PROMPT["en"]).format(topic=request_line)
-        extra_research = await call_gemini_web(extra_prompt, new_chat=False)
+        extra_research = await call_gemini(extra_prompt, gemini_model, new_chat=False)
         return claude_response, extra_research
     except Exception:
         return claude_response, ""
@@ -613,6 +633,47 @@ def _run_applescript(script: str) -> str:
     if result.returncode != 0:
         raise RuntimeError(f"AppleScript error: {result.stderr.strip()}")
     return result.stdout.strip()
+
+
+def _is_gemini_cli(model: str) -> bool:
+    return model != "gemini-web"
+
+
+async def call_gemini(prompt: str, model: str, new_chat: bool = True) -> str:
+    """Route to CLI or web based on model selection."""
+    if _is_gemini_cli(model):
+        return await call_gemini_cli(prompt, model)
+    return await call_gemini_web(prompt, new_chat)
+
+
+async def call_gemini_cli(prompt: str, model: str = "gemini-2.5-pro") -> str:
+    """Call Gemini via CLI (uses Google One Pro quota)."""
+    cmd = ["gemini", "-p", prompt, "--output-format", "text", "-y"]
+    if model and model != "gemini-web":
+        cmd += ["--model", model]
+    proc = await asyncio.create_subprocess_exec(
+        *cmd,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    try:
+        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=120)
+    except asyncio.TimeoutError:
+        proc.kill()
+        await proc.communicate()
+        raise RuntimeError(f"Gemini CLI timeout (120s) — 모델 용량 초과 또는 네트워크 문제. 다른 모델을 선택하세요.")
+    output = stdout.decode().strip()
+    err = stderr.decode().strip()
+    # Strip "YOLO mode is enabled." lines
+    lines = [l for l in output.splitlines() if "YOLO mode" not in l]
+    output = "\n".join(lines).strip()
+    if not output:
+        # Parse common errors from stderr/stdout
+        combined = err + output
+        if "exhausted" in combined or "capacity" in combined:
+            raise RuntimeError(f"Gemini CLI: [{model}] 모델 용량 초과 — 다른 모델을 선택하세요.")
+        raise RuntimeError(f"Gemini CLI error: {combined or 'empty response'}")
+    return output
 
 
 def _find_gemini_script() -> str:
@@ -962,24 +1023,25 @@ async def debate(request: Request):
             })
             await asyncio.sleep(0)
 
-            yield sse_event("thinking", {"agent": "gemini", "round": 0, "model": strings["thinking_context"], "action": "context_restore"})
-            await asyncio.sleep(0)
+            if not _is_gemini_cli(gemini_model):
+                yield sse_event("thinking", {"agent": "gemini", "round": 0, "model": strings["thinking_context"], "action": "context_restore"})
+                await asyncio.sleep(0)
 
-            topic_notice = strings["context_topic_notice"].format(new_topic=new_topic) if new_topic else ""
-            context_prompt = strings["context_restore"].format(
-                saved_topic=saved_topic,
-                research=research_data,
-                transcript=transcript,
-                topic_notice=topic_notice,
-                rounds=rounds,
-            )
+                topic_notice = strings["context_topic_notice"].format(new_topic=new_topic) if new_topic else ""
+                context_prompt = strings["context_restore"].format(
+                    saved_topic=saved_topic,
+                    research=research_data,
+                    transcript=transcript,
+                    topic_notice=topic_notice,
+                    rounds=rounds,
+                )
 
-            try:
-                await call_gemini_web(context_prompt, new_chat=True)
-            except Exception as e:
-                yield sse_event("error", {"message": f"⚠️ Gemini context restore error: {e}"})
-                yield sse_event("done", {})
-                return
+                try:
+                    await call_gemini(context_prompt, gemini_model, new_chat=True)
+                except Exception as e:
+                    yield sse_event("error", {"message": f"⚠️ Gemini context restore error: {e}"})
+                    yield sse_event("done", {})
+                    return
 
             status_msg = strings["status_restored"]
             if new_topic:
@@ -1018,7 +1080,7 @@ async def debate(request: Request):
                     yield sse_event("done", {})
                     return
 
-                claude_response, extra_research = await _handle_data_request(claude_response, research_data, lang, claude_model)
+                claude_response, extra_research = await _handle_data_request(claude_response, research_data, lang, claude_model, gemini_model)
                 claude_history.append({"role": "assistant", "content": claude_response})
                 transcript += f"## Claude (Round {round_num})\n{claude_response}\n\n"
                 messages.append({"agent": "claude", "round": round_num, "content": claude_response})
@@ -1031,7 +1093,13 @@ async def debate(request: Request):
                 gemini_rebuttal_text = topic_prefix_g + strings["gemini_rebuttal"].format(response=claude_response)
 
                 try:
-                    gemini_response = await call_gemini_web(gemini_rebuttal_text, new_chat=False)
+                    if _is_gemini_cli(gemini_model):
+                        rebuttal_sys = build_rebuttal_system(active_topic, lang)
+                        _tmp_hist = [{"role": "user", "content": gemini_rebuttal_text}]
+                        gemini_prompt = build_prompt(rebuttal_sys, _tmp_hist, lang)
+                        gemini_response = await call_gemini(gemini_prompt, gemini_model, new_chat=False)
+                    else:
+                        gemini_response = await call_gemini(gemini_rebuttal_text, gemini_model, new_chat=False)
                 except Exception as e:
                     yield sse_event("error", {"message": f"⚠️ Gemini error: {e}"})
                     yield sse_event("done", {})
@@ -1083,7 +1151,7 @@ async def debate(request: Request):
 
         try:
             research_prompt = GEMINI_RESEARCH_PROMPT.get(lang, GEMINI_RESEARCH_PROMPT["en"]).format(topic=topic)
-            research_data = await call_gemini_web(research_prompt, new_chat=True)
+            research_data = await call_gemini(research_prompt, gemini_model, new_chat=True)
         except Exception as e:
             yield sse_event("error", {"message": f"⚠️ Research error: {e}"})
             yield sse_event("done", {})
@@ -1136,7 +1204,7 @@ async def debate(request: Request):
             yield sse_event("done", {})
             return
 
-        claude_response, extra_research = await _handle_data_request(claude_response, research_data, lang, claude_model)
+        claude_response, extra_research = await _handle_data_request(claude_response, research_data, lang, claude_model, gemini_model)
         claude_history.append({"role": "assistant", "content": claude_response})
         transcript += f"## Claude (Round 1 - Opening)\n{claude_response}\n\n"
         messages.append({"agent": "claude", "round": 1, "role": claude_role_name, "content": claude_response})
@@ -1157,7 +1225,7 @@ async def debate(request: Request):
         gemini_history.append({"role": "user", "content": gemini_opening})
         try:
             gemini_prompt = build_prompt(gemini_system, gemini_history, lang)
-            gemini_response = await call_gemini_web(gemini_prompt, new_chat=True)
+            gemini_response = await call_gemini(gemini_prompt, gemini_model, new_chat=True)
         except Exception as e:
             yield sse_event("error", {"message": f"⚠️ Gemini error: {e}"})
             yield sse_event("done", {})
@@ -1194,7 +1262,7 @@ async def debate(request: Request):
                 yield sse_event("done", {})
                 return
 
-            claude_response, extra_research = await _handle_data_request(claude_response, research_data, lang, claude_model)
+            claude_response, extra_research = await _handle_data_request(claude_response, research_data, lang, claude_model, gemini_model)
             claude_history.append({"role": "assistant", "content": claude_response})
             transcript += f"## Claude (Round {round_num})\n{claude_response}\n\n"
             messages.append({"agent": "claude", "round": round_num, "role": claude_role_name, "content": claude_response})
@@ -1208,7 +1276,13 @@ async def debate(request: Request):
             gemini_history.append({"role": "user", "content": gemini_rebuttal_text})
 
             try:
-                gemini_response = await call_gemini_web(gemini_rebuttal_text, new_chat=False)
+                if _is_gemini_cli(gemini_model):
+                    # CLI: pass trimmed history with lightweight system (no research) to save tokens
+                    rebuttal_sys = build_rebuttal_system(topic, lang, gemini_role_desc or "")
+                    gemini_prompt = build_prompt(rebuttal_sys, gemini_history, lang)
+                    gemini_response = await call_gemini(gemini_prompt, gemini_model, new_chat=False)
+                else:
+                    gemini_response = await call_gemini(gemini_rebuttal_text, gemini_model, new_chat=False)
             except Exception as e:
                 yield sse_event("error", {"message": f"⚠️ Gemini error: {e}"})
                 yield sse_event("done", {})
