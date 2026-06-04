@@ -16,7 +16,7 @@ Claude Pro와 Google One AI Plus를 이미 구독 중이라면, 각 요금제에
 ## 개요
 
 - **Claude**: Claude Code CLI를 통해 호출 (Pro 플랜 쿼터 사용, API 키 불필요)
-- **Gemini**: Naver Whale 브라우저 자동화로 Gemini 웹을 직접 조작 (Google One AI Plus 구독 사용)
+- **Gemini**: Naver Whale 브라우저 자동화로 Gemini 웹을 직접 조작 (Google One AI Plus 구독 사용) 또는 Gemini CLI 사용
 - **실시간 스트리밍**: SSE(Server-Sent Events)로 토론 진행 상황을 실시간 표시
 - **자동 저장 & 이어하기**: 토론 완료 시 자동 저장, 심화 주제로 이어서 진행 가능
 
@@ -24,7 +24,7 @@ Claude Pro와 Google One AI Plus를 이미 구독 중이라면, 각 요금제에
 
 1. **자료 조사**: Gemini가 주제를 웹 검색으로 조사
 2. **개회 발언**: Claude와 Gemini가 각자 입장 제시
-3. **반론 라운드**: 설정한 라운드 수만큼 서로 반론
+3. **반론 라운드**: 설정한 라운드 수만큼 서로 반론 — 각 모델은 **상대방의 구체적 주장에 반드시 직접 답해야** 합니다
 4. **종합 결론**: Claude가 토론 전체를 요약·정리
 5. **저장 & 계속**: 완료 시 자동 저장, 추가 라운드 또는 심화 주제로 이어서 진행 가능
 
@@ -34,7 +34,9 @@ Claude Pro와 Google One AI Plus를 이미 구독 중이라면, 각 요금제에
 
 - **Python 3.9+**
 - **Claude Code CLI** 설치 및 로그인 (`claude` 명령어 사용 가능한 상태)
-- **Naver Whale 브라우저** — Gemini(gemini.google.com)에 Google 계정으로 로그인된 상태
+- **Naver Whale 브라우저** — Gemini(gemini.google.com)에 Google 계정으로 로그인된 상태 (Gemini 웹 모드 사용 시에만 필요)
+- **Gemini CLI** (`gemini`) — 설치 및 인증 완료 (Gemini CLI 모델 사용 시에만 필요)
+
 ## 설치
 
 ```bash
@@ -52,7 +54,7 @@ python app.py
 
 브라우저에서 `http://localhost:5050` 접속
 
-> Whale 브라우저가 **미리 실행 중**이고 Gemini에 **로그인된 상태**여야 합니다.
+> Gemini 웹 모드 사용 시 Whale 브라우저가 **미리 실행 중**이고 Gemini에 **로그인된 상태**여야 합니다.
 
 ## 사용법
 
@@ -61,14 +63,50 @@ python app.py
 1. 토론 주제 입력 (예: `2026년 미국 경기침체 가능성`)
 2. 라운드 수 선택 (2~5)
 3. Claude / Gemini 모델 선택
-4. `토론 시작` 버튼 클릭
+4. 옵션 설정 (앵커링 방지, Sonnet 결론)
+5. `토론 시작` 버튼 클릭
+
+### 옵션
+
+| 옵션 | 설명 |
+|------|------|
+| ⚓ 앵커링 방지 | 모델이 상대방의 프레이밍에 쉽게 끌려가지 않도록 방지 |
+| ⚡ Sonnet 결론 | 선택한 Claude 모델 대신 `claude-sonnet-4-6`으로 결론 도출 |
 
 ### 저장 & 이어서 토론
 
 - 토론 완료 시 **자동 저장**됨
 - **`▶ 추가 라운드`** 버튼으로 현재 토론 이어서 진행
 - 심화 주제 입력 가능 — 이전 토론 컨텍스트는 두 모델 모두 유지됨
-- **`📁 저장된 토론 불러오기`** 에서 이전 토론 보기 / 이어서 / 삭제
+- **`📁 저장된 토론 불러오기`** 에서 이전 토론 보기 / 이어서 / 삭제 (10개씩 페이징)
+
+## 지원 모델
+
+### Claude
+| 모델 | 비고 |
+|------|------|
+| Claude Opus 4.8 | 기본값 — 최상위 모델 |
+| Claude Opus 4.7 | |
+| Claude Opus 4.6 | |
+| Claude Sonnet 4.6 | |
+| Claude Haiku 4.5 | 가장 빠름 |
+
+### Gemini
+| 모델 | 비고 |
+|------|------|
+| Gemini (웹 브라우저) | 기본값 — Whale 브라우저 자동화 |
+| Gemini 3.1 Pro Preview (CLI) | Gemini CLI 필요 |
+| Gemini 3 Flash Preview (CLI) | Gemini CLI 필요 |
+| Gemini 2.5 Pro (CLI) | Gemini CLI 필요 |
+| Gemini 2.0 Flash (CLI) | Gemini CLI 필요 |
+
+## 할루시네이션 방지
+
+모든 모델에 다음 지침이 적용됩니다:
+- 리서치 자료 또는 검증된 지식에서 확인된 사실과 수치만 인용
+- 통계, 가격, 퍼센트, 연구명, 구체적 수치 절대 날조 금지
+- 특정 데이터가 없으면 숫자를 만들지 않고 "데이터 없음"으로 명시
+- 상대방의 구체적 주장에 반드시 직접 반박 — 주장 무시·회피 금지
 
 ## 구조
 
@@ -87,8 +125,8 @@ debate-arena/
 |------|------|
 | 백엔드 | Python, Starlette, Uvicorn |
 | 프론트엔드 | Vanilla JS, SSE |
-| Claude 연동 | Claude Code CLI (`claude -p`) |
-| Gemini 연동 | Whale 브라우저 AppleScript (osascript) |
+| Claude 연동 | Claude Code CLI (`claude -p --system-prompt`) |
+| Gemini 연동 | Whale 브라우저 AppleScript (osascript) 또는 Gemini CLI (`gemini -p`) |
 | 인코딩 | Base64 (AppleScript→JS 다중 이스케이프 우회) |
 
 ## Gemini 브라우저 자동화 원리
@@ -97,6 +135,7 @@ AppleScript로 Whale의 Gemini 탭에 JavaScript를 직접 실행합니다.
 
 - 프롬프트는 **Base64 인코딩** 후 `atob()` + `decodeURIComponent()`로 디코딩 (한국어 깨짐 방지)
 - 현재 활성 탭을 건드리지 않고 **백그라운드 탭**에서 입력/전송
+- **모든 열린 창**에서 Gemini 탭을 검색 (앞쪽 창에만 한정하지 않음)
 - 응답 완료 감지: 2초마다 텍스트 길이 폴링, 2회 연속 동일하면 완료로 판단
 - 응답 읽기: 4,000자씩 청크로 분할 (AppleScript 반환값 크기 제한 우회)
 - 2라운드부터는 **같은 탭**을 재사용 → Gemini 컨텍스트 유지
@@ -104,5 +143,6 @@ AppleScript로 Whale의 Gemini 탭에 JavaScript를 직접 실행합니다.
 ## 주의 사항
 
 - Claude Code CLI의 **Pro 플랜 시간당 토큰 한도**에 걸릴 수 있습니다. 한도 초과 시 토론이 중단되며 리셋 시간이 표시됩니다.
-- Gemini 응답 시간 초과(180초)가 발생하면 네트워크 상태나 Gemini 서비스 상태를 확인하세요.
-- Whale 브라우저는 실행 중이어야 하며, 자동화 중 다른 작업으로 Gemini 탭을 닫으면 오류가 발생합니다.
+- Gemini 응답 시간 초과(웹 180초, CLI 120초) 시 네트워크 상태나 Gemini 서비스 상태를 확인하세요.
+- Gemini CLI 모델 사용 시 용량 초과 오류가 발생하면 다른 모델로 변경하세요.
+- Whale 브라우저는 실행 중이어야 하며, 자동화 중 Gemini 탭을 닫으면 오류가 발생합니다.
