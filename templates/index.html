@@ -882,7 +882,7 @@
                 <label class="model-label gemini" data-i18n="geminiModel">🔴 Gemini Model</label>
                 <select class="model-select gemini-border" id="geminiModelSelect">
                     {% for model_id, model_name in gemini_models.items() %}
-                    <option value="{{ model_id }}" {{ 'selected' if model_id == 'gemini-3.1-pro-preview' }}>{{ model_name }}</option>
+                    <option value="{{ model_id }}" {{ 'selected' if model_id == 'gemini-web' }}>{{ model_name }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -909,10 +909,10 @@
                 <div class="toggle-dot"></div>
                 <span class="option-label" data-i18n="antiAnchor">⚓ Anti-Anchoring</span>
             </label>
-            <label class="option-toggle active" id="fastConclusionToggle" onclick="toggleFastConclusion()">
-                <input type="checkbox" id="fastConclusionCheck" checked>
+            <label class="option-toggle" id="sonnetConclusionToggle" onclick="toggleSonnetConclusion()">
+                <input type="checkbox" id="sonnetConclusionCheck">
                 <div class="toggle-dot"></div>
-                <span class="option-label" data-i18n="fastConclusion">⚡ Haiku Conclusion</span>
+                <span class="option-label" data-i18n="sonnetConclusion">⚡ Sonnet Conclusion</span>
             </label>
         </div>
     </div>
@@ -979,7 +979,7 @@
                 roleLabel: '🎭 Role', roleNone: 'None',
                 roleBullBear: 'Bull vs Bear', roleOptPess: 'Optimist vs Pessimist',
                 roleProCon: 'Pro vs Con', roleTradInn: 'Tradition vs Innovation',
-                antiAnchor: '⚓ Anti-Anchoring', fastConclusion: '⚡ Haiku Conclusion',
+                antiAnchor: '⚓ Anti-Anchoring', fastConclusion: '⚡ Haiku Conclusion', sonnetConclusion: '⚡ Sonnet Conclusion',
                 savedToggle: '📁 Load saved debate', savedToggleOpen: '📁 Load saved debate ▲',
                 saveBtn: '💾 Save Debate', continueBtn: '▶ Additional Rounds',
                 savedLoading: 'Loading...', savedEmpty: 'No saved debates', savedError: 'Error loading',
@@ -1020,7 +1020,7 @@
                 roleLabel: '🎭 역할 고정', roleNone: '없음',
                 roleBullBear: '강세론 vs 약세론', roleOptPess: '낙관론 vs 비관론',
                 roleProCon: '찬성 vs 반대', roleTradInn: '전통 vs 혁신',
-                antiAnchor: '⚓ 앵커링 방지', fastConclusion: '⚡ 결론 Haiku',
+                antiAnchor: '⚓ 앵커링 방지', fastConclusion: '⚡ 결론 Haiku', sonnetConclusion: '⚡ Sonnet 결론',
                 savedToggle: '📁 저장된 토론 불러오기', savedToggleOpen: '📁 저장된 토론 불러오기 ▲',
                 saveBtn: '💾 토론 저장', continueBtn: '▶ 추가 라운드',
                 savedLoading: '불러오는 중...', savedEmpty: '저장된 토론이 없습니다', savedError: '불러오기 오류',
@@ -1061,7 +1061,7 @@
                 roleLabel: '🎭 Rol', roleNone: 'Ninguno',
                 roleBullBear: 'Alcista vs Bajista', roleOptPess: 'Optimista vs Pesimista',
                 roleProCon: 'A favor vs En contra', roleTradInn: 'Tradición vs Innovación',
-                antiAnchor: '⚓ Anti-anclaje', fastConclusion: '⚡ Conclusión Haiku',
+                antiAnchor: '⚓ Anti-anclaje', fastConclusion: '⚡ Conclusión Haiku', sonnetConclusion: '⚡ Conclusión Sonnet',
                 savedToggle: '📁 Cargar debate guardado', savedToggleOpen: '📁 Cargar debate guardado ▲',
                 saveBtn: '💾 Guardar Debate', continueBtn: '▶ Rondas adicionales',
                 savedLoading: 'Cargando...', savedEmpty: 'No hay debates guardados', savedError: 'Error al cargar',
@@ -1174,14 +1174,14 @@
             toggle.classList.toggle('active', check.checked);
         }
 
-        function toggleFastConclusion() {
-            const toggle = document.getElementById('fastConclusionToggle');
-            const check = document.getElementById('fastConclusionCheck');
+        function toggleSonnetConclusion() {
+            const toggle = document.getElementById('sonnetConclusionToggle');
+            const check = document.getElementById('sonnetConclusionCheck');
             check.checked = !check.checked;
             toggle.classList.toggle('active', check.checked);
         }
 
-        let roleSwapped = false;
+let roleSwapped = false;
 
         function onRoleModeChange() {
             roleSwapped = false;
@@ -1644,8 +1644,7 @@
             const role_mode = document.getElementById('roleModeSelect').value || null;
             const anti_anchor = document.getElementById('antiAnchorCheck').checked;
             const role_swap = roleSwapped;
-            const fast_conclusion = document.getElementById('fastConclusionCheck').checked;
-
+            const sonnet_conclusion = document.getElementById('sonnetConclusionCheck').checked;
             // Clear previous state
             const container = document.getElementById('debateContainer');
             container.innerHTML = '';
@@ -1655,7 +1654,7 @@
             pendingResumeId = null;
             document.getElementById('examples').style.display = 'none';
 
-            await runDebate({ topic, rounds, claude_model, gemini_model, role_mode, anti_anchor, role_swap, fast_conclusion, lang: currentLang });
+            await runDebate({ topic, rounds, claude_model, gemini_model, role_mode, anti_anchor, role_swap, sonnet_conclusion, lang: currentLang });
         }
 
         async function runDebate(params) {

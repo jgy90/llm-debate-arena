@@ -999,7 +999,7 @@ async def debate(request: Request):
     role_mode = body.get("role_mode", None)
     anti_anchor = body.get("anti_anchor", False)
     role_swap = body.get("role_swap", False)
-    fast_conclusion = body.get("fast_conclusion", True)  # use Haiku for conclusion
+    sonnet_conclusion = body.get("sonnet_conclusion", False)
     lang = body.get("lang", "en")
     if lang not in ("en", "ko", "es"):
         lang = "en"
@@ -1009,8 +1009,7 @@ async def debate(request: Request):
 
     async def generate():
         claude_name = CLAUDE_MODELS.get(claude_model, claude_model)
-        # Use fast model for conclusion if enabled and user isn't already on haiku
-        conclusion_model = "claude-sonnet-4-6"
+        conclusion_model = "claude-sonnet-4-6" if sonnet_conclusion else claude_model
         gemini_name = "Gemini (Web)"
         extra_research = ""
         conclusion = ""
