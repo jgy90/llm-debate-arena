@@ -22,9 +22,10 @@ DEBATES_DIR = Path("debates")
 DEBATES_DIR.mkdir(exist_ok=True)
 
 CLAUDE_MODELS = {
+    "claude-opus-4-8": "Claude Opus 4.8",
+    "claude-opus-4-7": "Claude Opus 4.7",
     "claude-opus-4-6": "Claude Opus 4.6",
     "claude-sonnet-4-6": "Claude Sonnet 4.6",
-    "claude-sonnet-4-20250514": "Claude Sonnet 4",
     "claude-haiku-4-5-20251001": "Claude Haiku 4.5",
 }
 
@@ -58,6 +59,8 @@ List 6-10 specific numbers, indicators, or facts most critical to this debate.
 ## Macro Context
 Broader economic, regulatory, or market forces relevant to the topic.
 
+CRITICAL — ANTI-HALLUCINATION: Only include facts, numbers, and statistics from your actual search results. NEVER fabricate figures, dates, prices, or study names. If specific data is not found, write "데이터 없음" or "data not available" — do not invent numbers. Every statistic must be verifiable from real sources.
+
 Respond in English.""",
 
     "ko": """당신은 리서치 애널리스트입니다. 아래 주제에 대해 웹 검색으로 최신 정보를 수집하고 구조화된 리서치 보고서를 작성하세요.
@@ -81,6 +84,8 @@ Respond in English.""",
 ## 거시적 맥락
 관련된 경제적, 규제적, 시장적 요인.
 
+중요 — 할루시네이션 금지: 실제 검색 결과에서 확인된 사실, 수치, 통계만 포함하세요. 수치, 날짜, 가격, 연구명을 절대 지어내지 마세요. 특정 데이터를 찾지 못하면 "데이터 없음"으로 표기하세요 — 숫자를 만들어내지 마세요. 모든 통계는 실제 출처에서 검증 가능해야 합니다.
+
 한국어로 응답하세요.""",
 
     "es": """Eres un analista de investigación. Busca en la web la información más reciente sobre el siguiente tema y produce un informe de investigación estructurado.
@@ -103,6 +108,8 @@ Lista de 6-10 números, indicadores o hechos más críticos para este debate.
 
 ## Contexto Macroeconómico
 Fuerzas económicas, regulatorias o de mercado más amplias relevantes al tema.
+
+CRÍTICO — ANTI-ALUCINACIÓN: Solo incluye hechos, números y estadísticas de tus resultados de búsqueda reales. NUNCA inventes cifras, fechas, precios o nombres de estudios. Si no encuentras datos específicos, escribe "dato no disponible" — no inventes números.
 
 Responde en español.""",
 }
@@ -198,39 +205,59 @@ CLAUDE_SYSTEM_TEMPLATE = """Debate: Claude vs Gemini | Topic: {topic}
 [Research Material]
 {research}
 
-Rules: {respond_instruction} Cite specific numbers and statistics from the research material. Challenge your opponent's claims with counter-evidence. 300-500 words. If you need more data on a specific point, end your response with [RESEARCH_REQUEST]: <specific request>."""
+Rules: {respond_instruction} Cite specific numbers and statistics from the research material. Challenge your opponent's claims with counter-evidence. 300-500 words. If you need more data on a specific point, end your response with [RESEARCH_REQUEST]: <specific request>.
+
+CRITICAL — ANTI-HALLUCINATION:
+- ONLY cite facts, numbers, dates, and statistics that actually appear in the research material above or that you know with certainty from verified knowledge.
+- NEVER fabricate statistics, prices, percentages, study names, or specific figures. If you lack a specific number, say "data not available" rather than inventing one.
+- If you are uncertain whether a fact is accurate, do NOT state it as fact — either omit it or explicitly flag it as uncertain.
+- Do NOT cite sources, reports, or studies that you cannot verify actually exist."""
 
 GEMINI_SYSTEM_TEMPLATE = """Debate: Gemini vs Claude | Topic: {topic}
 
 [Research Material]
 {research}
 
-Rules: {respond_instruction} Cite specific numbers and statistics from the research material. Challenge your opponent's claims with counter-evidence. You may search the web for additional data. 300-500 words."""
+Rules: {respond_instruction} Cite specific numbers and statistics from the research material. Challenge your opponent's claims with counter-evidence. You may search the web for additional data. 300-500 words.
+
+CRITICAL — ANTI-HALLUCINATION:
+- ONLY cite facts and figures that appear in the research material, your web search results, or that you know with certainty.
+- NEVER fabricate statistics, prices, percentages, study names, or specific figures. If you lack a specific number, say "data not available" rather than inventing one.
+- If you are uncertain whether a fact is accurate, do NOT state it as fact — either omit it or explicitly flag it as uncertain.
+- Do NOT cite sources, reports, or studies that you cannot verify actually exist."""
 
 # Lightweight system for rebuttal rounds — no research data (already in history), saves tokens
 GEMINI_REBUTTAL_SYSTEM_TEMPLATE = """Debate: Gemini vs Claude | Topic: {topic}
 Role: {role_desc}
-Rules: {respond_instruction} Challenge opponent's claims with specific data. You may search the web. 300-500 words."""
+Rules: {respond_instruction} 300-500 words.
+MANDATORY: You MUST directly address and respond to your opponent's specific claims. Do NOT ignore or skip their arguments.
+CRITICAL: NEVER fabricate statistics or figures. Only cite data you can verify. If data is unavailable, say so explicitly."""
 
 ANTI_SYCOPHANCY_RULES = {
     "en": """
 - Every claim must be backed by a specific number, statistic, or fact from the research material.
+- You MUST directly address your opponent's arguments. Do NOT ignore or sidestep their specific points.
 - Do not easily agree with your opponent. If you disagree, rebut with specific counter-evidence and cite the data.
 - Do not abandon your position without new evidence. Pressure alone is not a reason to concede.
 - Partial agreement is allowed, but explicitly argue the points you still dispute with supporting data.
-- Avoid vague hedging ("it depends", "there are pros and cons"). Take a clear stance and defend it.""",
+- Avoid vague hedging ("it depends", "there are pros and cons"). Take a clear stance and defend it.
+- NEVER invent numbers, statistics, or sources. If you don't have the data, say "specific data unavailable" — do not fabricate.""",
     "ko": """
 - 모든 주장은 리서치 자료의 구체적인 수치, 통계, 사실로 뒷받침되어야 합니다.
+- 반드시 상대방의 주장에 직접 답해야 합니다. 상대방의 구체적 논점을 무시하거나 회피하지 마세요.
 - 상대방 주장에 쉽게 동의하지 마세요. 반박할 때는 구체적인 반증 데이터를 인용하세요.
 - 새로운 증거 없이는 기존 입장을 포기하지 마세요. 압박만으로는 양보할 이유가 없습니다.
 - 부분 동의는 허용하지만, 여전히 동의하지 않는 핵심 지점을 데이터로 논증하세요.
-- 모호한 표현("경우에 따라 다르다", "장단점이 있다")을 피하고 명확한 입장을 취하세요.""",
+- 모호한 표현("경우에 따라 다르다", "장단점이 있다")을 피하고 명확한 입장을 취하세요.
+- 절대로 수치, 통계, 출처를 지어내지 마세요. 데이터가 없으면 "구체적 데이터 없음"이라고 명시하세요 — 사실을 날조하지 마세요.""",
     "es": """
 - Cada afirmación debe estar respaldada por un número, estadística o hecho específico del material de investigación.
+- DEBES responder directamente a los argumentos de tu oponente. NO ignores ni esquives sus puntos específicos.
 - No estés de acuerdo fácilmente con el oponente. Si rebates, cita evidencia contraria específica.
 - No abandones tu posición sin nueva evidencia. La presión sola no es razón para ceder.
 - El acuerdo parcial está permitido, pero argumenta explícitamente los puntos en disputa con datos.
-- Evita evasivas vagas ("depende", "hay pros y contras"). Toma una postura clara y defiéndela.""",
+- Evita evasivas vagas ("depende", "hay pros y contras"). Toma una postura clara y defiéndela.
+- NUNCA inventes números, estadísticas o fuentes. Si no tienes el dato, di "dato no disponible" — no lo fabrique.""",
 }
 
 ROLE_PAIRS = {
@@ -275,8 +302,8 @@ ROLE_PAIRS = {
 DEBATE_STRINGS = {
     "en": {
         "opening": "Topic: {topic}\n\nPresent your analysis and opening position. Cite specific statistics and data from the research material. Structure your argument: (1) Current situation with key numbers, (2) Your core thesis, (3) Top 2-3 supporting evidence points.",
-        "rebuttal_suffix": "\n\nRebut with specific counter-evidence. Identify the weakest claim in the opponent's argument and challenge it with data. Then reinforce your own position with a new evidence point not yet raised.",
-        "gemini_rebuttal": "Here is your opponent (Claude)'s argument:\n\n{response}\n\nRebut with specific counter-evidence. Identify the weakest claim above and challenge it with data from your knowledge or web search. Add a new argument not yet raised in this debate.",
+        "rebuttal_suffix": "\n\nYou MUST directly address your opponent's most recent argument. Structure your response as:\n1. [DIRECT REBUTTAL] Quote or paraphrase at least 2 specific claims your opponent made, then refute each with concrete data.\n2. [COUNTER-ARGUMENT] Add a new supporting point for your own position not yet raised.\nDo NOT ignore or skip any of your opponent's key arguments.",
+        "gemini_rebuttal": "Here is your opponent (Claude)'s argument:\n\n{response}\n\nYou MUST directly address Claude's argument above. Structure your response as:\n1. [DIRECT REBUTTAL] Quote or paraphrase at least 2 specific claims Claude made above, then refute each with concrete data or web search results.\n2. [COUNTER-ARGUMENT] Add a new supporting point for your position not yet raised in this debate.\nDo NOT ignore or skip Claude's key arguments.",
         "gemini_opening_response": "Here is your opponent (Claude)'s opening statement:\n\n{response}\n\nPresent your own independent position with specific data. Do not simply react — build your own evidence-based thesis.",
         "deeper_prefix": "[Deeper topic: {topic}]\n\n",
         "context_restore": """Continuing from a previous debate.
@@ -300,8 +327,8 @@ We will continue for {rounds} more rounds. When ready, reply "Understood, let's 
     },
     "ko": {
         "opening": "주제: {topic}\n\n개회 분석과 입장을 제시하세요. 리서치 자료의 구체적인 통계와 데이터를 인용하세요. 다음 구조로 논거를 구성하세요: (1) 핵심 수치를 포함한 현재 상황, (2) 핵심 주장, (3) 상위 2-3개 근거 데이터.",
-        "rebuttal_suffix": "\n\n구체적인 반증 데이터로 반론하세요. 상대방 주장에서 가장 약한 부분을 찾아 데이터로 반박하고, 아직 제시되지 않은 새로운 근거를 추가하세요.",
-        "gemini_rebuttal": "상대방(Claude)의 주장입니다:\n\n{response}\n\n구체적인 반증 데이터로 반론하세요. 위 주장에서 가장 취약한 부분을 찾아 데이터로 반박하고, 이 토론에서 아직 제시되지 않은 새로운 논거를 추가하세요.",
+        "rebuttal_suffix": "\n\n반드시 상대방의 최근 주장에 직접 답해야 합니다. 다음 구조로 응답하세요:\n1. [직접 반박] 상대방이 제시한 구체적 주장 최소 2가지를 인용 또는 요약한 뒤, 각각 구체적 데이터로 반박하세요.\n2. [추가 논거] 이번 토론에서 아직 제시되지 않은 자신의 입장을 뒷받침할 새 근거를 추가하세요.\n상대방의 핵심 주장을 무시하거나 건너뛰지 마세요.",
+        "gemini_rebuttal": "상대방(Claude)의 주장입니다:\n\n{response}\n\n반드시 위 Claude의 주장에 직접 답해야 합니다. 다음 구조로 응답하세요:\n1. [직접 반박] Claude가 제시한 구체적 주장 최소 2가지를 인용 또는 요약한 뒤, 각각 구체적 데이터 또는 웹 검색 결과로 반박하세요.\n2. [추가 논거] 이번 토론에서 아직 제시되지 않은 자신의 입장을 뒷받침할 새 근거를 추가하세요.\nClaude의 핵심 주장을 무시하거나 건너뛰지 마세요.",
         "gemini_opening_response": "상대방(Claude)의 개회 발언입니다:\n\n{response}\n\n구체적인 데이터를 바탕으로 독립적인 입장을 제시하세요. 단순히 반응하지 말고 자체적인 증거 기반 논거를 구축하세요.",
         "deeper_prefix": "[심화 주제: {topic}]\n\n",
         "context_restore": """이전 토론을 이어서 진행합니다.
@@ -325,8 +352,8 @@ We will continue for {rounds} more rounds. When ready, reply "Understood, let's 
     },
     "es": {
         "opening": "Tema: {topic}\n\nPresenta tu análisis inicial y posición. Cita estadísticas y datos específicos del material de investigación. Estructura tu argumento: (1) Situación actual con cifras clave, (2) Tu tesis central, (3) Los 2-3 puntos de evidencia más sólidos.",
-        "rebuttal_suffix": "\n\nRebate con evidencia contraria específica. Identifica el argumento más débil del oponente y desafíalo con datos. Luego refuerza tu posición con un nuevo punto de evidencia aún no planteado.",
-        "gemini_rebuttal": "Aquí está el argumento de tu oponente (Claude):\n\n{response}\n\nRebate con evidencia contraria específica. Identifica el punto más débil arriba y desafíalo con datos. Agrega un nuevo argumento aún no planteado en este debate.",
+        "rebuttal_suffix": "\n\nDEBES responder directamente al argumento más reciente de tu oponente. Estructura tu respuesta así:\n1. [REFUTACIÓN DIRECTA] Cita o parafrasea al menos 2 afirmaciones específicas de tu oponente y refuta cada una con datos concretos.\n2. [CONTRA-ARGUMENTO] Agrega un nuevo punto de apoyo para tu posición aún no planteado.\nNO ignores ni omitas los argumentos clave de tu oponente.",
+        "gemini_rebuttal": "Aquí está el argumento de tu oponente (Claude):\n\n{response}\n\nDEBES responder directamente al argumento de Claude. Estructura tu respuesta así:\n1. [REFUTACIÓN DIRECTA] Cita o parafrasea al menos 2 afirmaciones específicas que Claude hizo arriba y refuta cada una con datos concretos o resultados de búsqueda web.\n2. [CONTRA-ARGUMENTO] Agrega un nuevo punto de apoyo para tu posición aún no planteado en este debate.\nNO ignores ni omitas los argumentos clave de Claude.",
         "gemini_opening_response": "Aquí está el discurso de apertura de tu oponente (Claude):\n\n{response}\n\nPresenta tu propia posición independiente con datos específicos. No simplemente reacciones — construye tu propia tesis basada en evidencia.",
         "deeper_prefix": "[Tema más profundo: {topic}]\n\n",
         "context_restore": """Continuando con un debate anterior.

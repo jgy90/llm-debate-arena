@@ -874,7 +874,7 @@
                 <label class="model-label claude" data-i18n="claudeModel">🔵 Claude Model</label>
                 <select class="model-select claude-border" id="claudeModelSelect">
                     {% for model_id, model_name in claude_models.items() %}
-                    <option value="{{ model_id }}" {{ 'selected' if model_id == 'claude-opus-4-6' }}>{{ model_name }}</option>
+                    <option value="{{ model_id }}" {{ 'selected' if model_id == 'claude-opus-4-8' }}>{{ model_name }}</option>
                     {% endfor %}
                 </select>
             </div>
